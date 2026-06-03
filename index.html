@@ -551,7 +551,7 @@ if(!entry.workout) entry.workout=autoWorkout();
 /* ===================== TODAY ===================== */
 function progressPct(){const w=PROGRAM[entry.workout];let done=0;w.ex.forEach(ex=>{const s=entry.sets[ex.id];if(s&&s.some(v=>+v>0))done++;});return w.ex.length?Math.round(done/w.ex.length*100):0;}
 function renderRing(){const p=progressPct();document.getElementById("ringProg").style.strokeDashoffset=201-(201*p/100);document.getElementById("ringPct").textContent=p+"%";}
-function renderDaySwitch(){const c=document.getElementById("daySwitch");c.innerHTML="";ORDER.forEach(k=>{const b=document.createElement("button");b.textContent="Day "+k;if(k===entry.workout)b.className="on";b.onclick=()=>{entry.workout=k;entry.sets={};persist(currentDate);renderToday();};c.appendChild(b);});}
+function renderDaySwitch(){const c=document.getElementById("daySwitch");c.innerHTML="";ORDER.forEach(k=>{const b=document.createElement("button");b.textContent="Day "+k;if(k===entry.workout)b.className="on";b.onclick=()=>{entry.workout=k;persist(currentDate);renderToday();};c.appendChild(b);});}
 function renderExList(){
   const w=PROGRAM[entry.workout];
   document.getElementById("focusTitle").innerHTML='<small>'+w.tag+' · '+w.ex.length+' moves</small>'+w.name;
