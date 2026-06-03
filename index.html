@@ -195,6 +195,7 @@
   .figbox{width:170px;max-width:62%}
   .figbox .figsvg{width:100%;height:auto;display:block}
   .figcap{margin-top:6px;font-size:14px;font-weight:700;color:var(--ember);letter-spacing:.06em;text-transform:uppercase}
+  .cell.future{opacity:.28}
 </style>
 </head>
 <body>
@@ -273,7 +274,7 @@
       </div>
     </div>
     <div class="card">
-      <span class="eyebrow">Last 35 days</span>
+      <span class="eyebrow">Last 5 weeks</span>
       <div class="dow"><span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span></div>
       <div class="heat" id="heat"></div>
       <p class="note" style="margin-top:12px">Brighter = more of the session completed. Consistency beats intensity at 47 — show up, log it, repeat.</p>
@@ -616,12 +617,21 @@ function renderProgress(){
   document.getElementById("sStreak").textContent=computeStreak();
   document.getElementById("sTotal").textContent=dates.filter(d=>DB[d].done).length;
   document.getElementById("sCreatine").textContent=dates.filter(d=>DB[d].creatine).length;
-  const heat=document.getElementById("heat");heat.innerHTML="";const t=new Date();
-  for(let i=34;i>=0;i--){const d=new Date(t);d.setDate(t.getDate()-i);const k=d.toISOString().slice(0,10);
-    const c=document.createElement("div");c.className="cell";if(k===today())c.classList.add("today");
-    const e=DB[k];if(e){let pct=0;if(e.workout){const w=PROGRAM[e.workout];let dn=0;w.ex.forEach(x=>{const s=e.sets[x.id];if(s&&s.some(v=>+v>0))dn++;});pct=dn/w.ex.length;}
-      if(e.done||pct>=.99)c.classList.add("l3");else if(pct>=.5)c.classList.add("l2");else if(pct>0||e.creatine)c.classList.add("l1");}
-    c.title=fmtNice(k);heat.appendChild(c);}
+  const heat=document.getElementById("heat");heat.innerHTML="";
+  const tStr=today();
+  const gs=new Date(tStr+"T00:00:00Z");
+  gs.setUTCDate(gs.getUTCDate()-gs.getUTCDay()-28); // Sunday, 4 weeks before this week
+  for(let i=0;i<35;i++){
+    const d=new Date(gs);d.setUTCDate(gs.getUTCDate()+i);const k=d.toISOString().slice(0,10);
+    const c=document.createElement("div");c.className="cell";
+    if(k>tStr){c.classList.add("future");}
+    else{
+      if(k===tStr)c.classList.add("today");
+      const e=DB[k];if(e){let pct=0;if(e.workout){const w=PROGRAM[e.workout];let dn=0;w.ex.forEach(x=>{const s=e.sets[x.id];if(s&&s.some(v=>+v>0))dn++;});pct=dn/w.ex.length;}
+        if(e.done||pct>=.99)c.classList.add("l3");else if(pct>=.5)c.classList.add("l2");else if(pct>0||e.creatine)c.classList.add("l1");}
+    }
+    c.title=fmtNice(k);heat.appendChild(c);
+  }
   const sess=dates.filter(d=>DB[d].done).sort().slice(-14);
   const bars=document.getElementById("bars"),barx=document.getElementById("barx");bars.innerHTML="";barx.innerHTML="";
   const vols=sess.map(d=>{let tot=0;Object.values(DB[d].sets||{}).forEach(a=>a.forEach(v=>tot+=(+v||0)));return{d,tot};});
