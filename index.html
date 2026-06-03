@@ -147,6 +147,48 @@
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
   .micro{font-size:10.5px;color:var(--faint);text-align:center;margin-top:18px;line-height:1.6}
   a{color:var(--gold)}
+  /* ---- bigger type + exercise illustrations ---- */
+  .eyebrow{font-size:12px}
+  .ex-name .t{font-size:19px}
+  .ex-name .m{font-size:14px}
+  .ex-load{font-size:15px}
+  .ex-load small{font-size:11px}
+  .cue{font-size:16px}
+  .tech{font-size:15px}
+  .prog{font-size:14px}
+  .setpill{width:64px}
+  .setpill label{font-size:11px}
+  .setpill input{font-size:26px}
+  .setrow .lg{font-size:12px}
+  .toggle .lab .t{font-size:18px}
+  .toggle .lab .m{font-size:14px}
+  .finish{font-size:25px}
+  .note{font-size:16px}
+  .micro{font-size:13px}
+  .focus .big{font-size:clamp(30px,9vw,46px)}
+  .focus .big small{font-size:13px}
+  .stat .n{font-size:38px}
+  .stat .l{font-size:12px}
+  .who{font-size:14px}
+  .who .sync{font-size:12px}
+  nav.tabs button{font-size:15px}
+  nav.tabs button .ico{font-size:21px}
+  .dayswitch button{font-size:15px;padding:10px 15px}
+  #gate p{font-size:15px}
+  #gate input{font-size:40px}
+  #gate .hint{font-size:13px}
+  .lib-day h3{font-size:21px}
+  .lib-day h3 i{font-size:12px}
+  .ex.open .ex-body{max-height:1600px}
+  /* illustrations */
+  .figrow{display:flex;gap:8px;margin:0 0 12px}
+  .figframe{flex:1;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 6px 4px}
+  .figframe .figsvg{width:100%;height:auto;display:block}
+  .figframe .cap{text-align:center;font-size:12px;font-weight:700;color:var(--ember);letter-spacing:.05em;text-transform:uppercase;margin-top:4px}
+  .figsvg line,.figsvg .hd{stroke:var(--ember);stroke-width:4.5;stroke-linecap:round;stroke-linejoin:round;fill:none}
+  .figsvg .grd{stroke:var(--faint);stroke-width:2;stroke-dasharray:3 4}
+  .figsvg .eq{stroke:var(--gold);stroke-width:3;fill:none}
+  .figsvg .eqf{fill:var(--gold);stroke:none}
 </style>
 </head>
 <body>
@@ -430,6 +472,43 @@ const PROGRAM={
 };
 const ORDER=["A","B","C","D"];
 
+/* ===================== exercise illustrations (inline SVG stick figures) ===================== */
+function fig(p){
+  const L=(a,b)=>'<line x1="'+a[0]+'" y1="'+a[1]+'" x2="'+b[0]+'" y2="'+b[1]+'"/>';
+  const gy=p.floor||124;
+  let load='';
+  if(p.load==='kb'){var x=p.hand[0],y=p.hand[1];load='<path class="eq" d="M'+(x-5)+' '+y+' a5 5 0 0 1 10 0"/><circle class="eqf" cx="'+x+'" cy="'+(y+6)+'" r="6"/>';}
+  if(p.load==='db'){var x=p.hand[0],y=p.hand[1];load='<rect class="eqf" x="'+(x-8)+'" y="'+(y-2.5)+'" width="16" height="5" rx="2"/><rect class="eqf" x="'+(x-10)+'" y="'+(y-5)+'" width="3.5" height="10" rx="1"/><rect class="eqf" x="'+(x+6.5)+'" y="'+(y-5)+'" width="3.5" height="10" rx="1"/>';}
+  return '<svg viewBox="0 0 120 132" class="figsvg">'+
+    '<line class="grd" x1="6" y1="'+gy+'" x2="114" y2="'+gy+'"/>'+
+    '<circle class="hd" cx="'+p.head[0]+'" cy="'+p.head[1]+'" r="8"/>'+
+    L(p.sh,[p.head[0],p.head[1]+8])+L(p.sh,p.hip)+
+    L(p.sh,p.elb)+L(p.elb,p.hand)+
+    L(p.hip,p.kneeF)+L(p.kneeF,p.ankF)+
+    L(p.hip,p.kneeB)+L(p.kneeB,p.ankB)+
+    load+'</svg>';
+}
+const POSES={
+  a1:[["Start",{head:[58,16],sh:[58,32],hip:[58,66],elb:[60,50],hand:[61,66],kneeF:[66,90],ankF:[70,120],kneeB:[46,84],ankB:[34,92],load:'db'}],["Bottom",{head:[56,26],sh:[56,42],hip:[56,80],elb:[58,60],hand:[59,76],kneeF:[74,98],ankF:[74,120],kneeB:[42,100],ankB:[32,106],load:'db'}]],
+  a2:[["Stand",{head:[54,16],sh:[54,32],hip:[54,68],elb:[54,50],hand:[54,68],kneeF:[56,94],ankF:[56,120],kneeB:[52,94],ankB:[52,120],load:'kb'}],["Hinge",{head:[34,40],sh:[40,46],hip:[64,62],elb:[36,60],hand:[34,84],kneeF:[62,90],ankF:[58,120],kneeB:[66,90],ankB:[62,120],load:'kb'}]],
+  a3:[["Stand",{head:[54,16],sh:[54,32],hip:[54,66],elb:[56,50],hand:[57,66],kneeF:[56,92],ankF:[56,120],kneeB:[52,92],ankB:[52,120],load:'db'}],["Lunge",{head:[54,24],sh:[54,40],hip:[54,76],elb:[56,58],hand:[57,74],kneeF:[64,98],ankF:[66,120],kneeB:[40,104],ankB:[28,120],load:'db'}]],
+  a4:[["Down",{head:[54,18],sh:[54,34],hip:[54,70],elb:[60,52],hand:[64,68],kneeF:[55,96],ankF:[55,120],kneeB:[51,96],ankB:[51,116],load:'kb'}],["Up",{head:[54,12],sh:[54,28],hip:[54,64],elb:[60,46],hand:[64,62],kneeF:[55,90],ankF:[57,116],kneeB:[51,90],ankB:[51,104],load:'kb'}]],
+  b1:[["Up",{head:[102,64],sh:[90,68],hip:[58,76],elb:[90,88],hand:[90,108],kneeF:[40,80],ankF:[22,106],kneeB:[40,82],ankB:[22,108],floor:110}],["Down",{head:[104,84],sh:[92,88],hip:[58,92],elb:[96,98],hand:[90,108],kneeF:[40,96],ankF:[22,106],kneeB:[40,98],ankB:[22,108],floor:110}]],
+  b2:[["Bottom",{head:[20,94],sh:[34,98],hip:[70,102],elb:[40,86],hand:[44,76],kneeF:[84,90],ankF:[96,102],kneeB:[84,92],ankB:[96,104],load:'kb',floor:108}],["Press",{head:[20,94],sh:[34,98],hip:[70,102],elb:[36,80],hand:[34,60],kneeF:[84,90],ankF:[96,102],kneeB:[84,92],ankB:[96,104],load:'kb',floor:108}]],
+  b3:[["Rack",{head:[54,20],sh:[54,36],hip:[54,72],elb:[46,40],hand:[44,30],kneeF:[56,96],ankF:[56,122],kneeB:[52,96],ankB:[52,122],load:'kb'}],["Overhead",{head:[54,24],sh:[54,38],hip:[54,72],elb:[52,22],hand:[52,7],kneeF:[56,96],ankF:[56,122],kneeB:[52,96],ankB:[52,122],load:'kb'}]],
+  b4:[["Down",{head:[54,18],sh:[54,34],hip:[54,70],elb:[56,50],hand:[58,66],kneeF:[56,96],ankF:[56,122],kneeB:[52,96],ankB:[52,122],load:'db'}],["Raise",{head:[54,18],sh:[54,34],hip:[54,70],elb:[66,36],hand:[78,36],kneeF:[56,96],ankF:[56,122],kneeB:[52,96],ankB:[52,122],load:'db'}]],
+  c1:[["Hang",{head:[34,42],sh:[42,46],hip:[70,60],elb:[42,64],hand:[42,82],kneeF:[72,88],ankF:[70,120],kneeB:[76,88],ankB:[74,120],load:'kb'}],["Pull",{head:[34,42],sh:[42,46],hip:[70,60],elb:[52,52],hand:[56,60],kneeF:[72,88],ankF:[70,120],kneeB:[76,88],ankB:[74,120],load:'kb'}]],
+  c2:[["Hang",{head:[34,44],sh:[42,48],hip:[70,62],elb:[42,66],hand:[42,84],kneeF:[72,90],ankF:[70,120],kneeB:[76,90],ankB:[74,120],load:'db'}],["Row",{head:[34,44],sh:[42,48],hip:[70,62],elb:[50,54],hand:[52,62],kneeF:[72,90],ankF:[70,120],kneeB:[76,90],ankB:[74,120],load:'db'}]],
+  c3:[["Down",{head:[54,18],sh:[54,34],hip:[54,70],elb:[54,54],hand:[56,70],kneeF:[56,96],ankF:[56,122],kneeB:[52,96],ankB:[52,122],load:'db'}],["Curl",{head:[54,18],sh:[54,34],hip:[54,70],elb:[54,54],hand:[50,38],kneeF:[56,96],ankF:[56,122],kneeB:[52,96],ankB:[52,122],load:'db'}]],
+  c4:[["Hang",{head:[34,44],sh:[44,48],hip:[70,62],elb:[44,64],hand:[44,80],kneeF:[72,90],ankF:[70,120],kneeB:[76,90],ankB:[74,120],load:'db'}],["Open",{head:[34,44],sh:[44,48],hip:[70,62],elb:[30,44],hand:[16,40],kneeF:[72,90],ankF:[70,120],kneeB:[76,90],ankB:[74,120],load:'db'}]],
+  d1:[["Backswing",{head:[34,42],sh:[42,48],hip:[72,62],elb:[44,66],hand:[48,82],kneeF:[70,90],ankF:[66,120],kneeB:[76,90],ankB:[72,120],load:'kb'}],["Snap",{head:[54,16],sh:[54,32],hip:[54,68],elb:[64,38],hand:[78,38],kneeF:[56,94],ankF:[56,120],kneeB:[52,94],ankB:[52,120],load:'kb'}]],
+  d2:[["Stand",{head:[54,16],sh:[54,32],hip:[54,68],elb:[50,42],hand:[50,40],kneeF:[56,94],ankF:[56,120],kneeB:[52,94],ankB:[52,120],load:'kb'}],["Squat",{head:[54,26],sh:[54,42],hip:[54,82],elb:[50,52],hand:[50,50],kneeF:[68,92],ankF:[64,120],kneeB:[40,92],ankB:[44,120],load:'kb'}]],
+  d3:[["Up",{head:[102,64],sh:[90,68],hip:[58,76],elb:[90,88],hand:[90,108],kneeF:[40,80],ankF:[22,106],kneeB:[40,82],ankB:[22,108],floor:110}],["Down",{head:[104,84],sh:[92,88],hip:[58,92],elb:[96,98],hand:[90,108],kneeF:[40,96],ankF:[22,106],kneeB:[40,98],ankB:[22,108],floor:110}]],
+  d4:[["Plank",{head:[102,70],sh:[90,74],hip:[58,82],elb:[90,92],hand:[90,108],kneeF:[40,86],ankF:[22,108],kneeB:[40,88],ankB:[22,110],load:'db',floor:110}],["Row",{head:[102,70],sh:[90,74],hip:[58,82],elb:[80,80],hand:[78,90],kneeF:[40,86],ankF:[22,108],kneeB:[40,88],ankB:[22,110],load:'db',floor:110}]],
+  d5:[["Hold",{head:[102,72],sh:[90,76],hip:[58,84],elb:[90,92],hand:[88,108],kneeF:[40,88],ankF:[22,108],kneeB:[40,90],ankB:[22,110],floor:110}]]
+};
+function figFrames(id){const fr=POSES[id];if(!fr)return'';return'<div class="figrow">'+fr.map(f=>'<div class="figframe">'+fig(f[1])+'<div class="cap">'+f[0]+'</div></div>').join('')+'</div>';}
+
 /* ===================== helpers ===================== */
 const today=()=>new Date().toISOString().slice(0,10);
 function fmtNice(d){return new Date(d+"T12:00:00").toLocaleDateString(undefined,{weekday:'long',month:'short',day:'numeric'});}
@@ -463,6 +542,7 @@ function renderExList(){
         '<div class="chev">▶</div>'+
       '</div>'+
       '<div class="ex-body"><div class="ex-inner">'+
+        figFrames(ex.id)+
         ex.cues.map(c=>'<div class="cue">'+c+'</div>').join('')+
         '<div class="tech"><b>Coach:</b> '+ex.tech+'</div>'+
         '<div class="prog"><b>Level up:</b> '+ex.prog+'</div>'+
