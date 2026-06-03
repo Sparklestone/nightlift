@@ -8,7 +8,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Hanken+Grotesk:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
     --bg:#0a0a0c;--panel:#121216;--panel-2:#17171c;--line:#26262e;
@@ -25,7 +24,7 @@
 
   /* gate */
   #gate{position:fixed;inset:0;z-index:80;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px;text-align:center}
-  #gate::before{content:"";position:absolute;inset:0;background:radial-gradient(700px 420px at 50% 30%, rgba(255,106,61,.18), transparent 60%)}
+  #gate::before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(700px 420px at 50% 30%, rgba(255,106,61,.18), transparent 60%)}
   #gate .inner{position:relative;z-index:1;width:100%;max-width:300px}
   #gate .lk{font-size:40px;margin-bottom:14px}
   #gate .kic{font-size:11px;letter-spacing:.34em;color:var(--ember);font-weight:700;text-transform:uppercase}
@@ -160,7 +159,7 @@
     <h1>NIGHT<span>LIFT</span></h1>
     <p>Enter your code</p>
     <input id="gateInput" type="tel" inputmode="numeric" maxlength="4" placeholder="••••" autocomplete="off">
-    <button id="gateBtn">UNLOCK</button>
+    <button id="gateBtn" type="button">UNLOCK</button>
     <div class="hint">4-digit access code</div>
   </div>
 </div>
@@ -299,7 +298,22 @@ let DB=loadLocal();
 
 /* ===================== cloud sync ===================== */
 let sb=null, cloud=false;
-try{ if(window.supabase && SB_URL && SB_ANON_KEY){ sb=window.supabase.createClient(SB_URL,SB_ANON_KEY); cloud=true; } }catch(e){ cloud=false; }
+function loadSupabase(){
+  return new Promise(res=>{
+    if(window.supabase) return res(true);
+    const s=document.createElement("script");
+    s.src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
+    s.onload=()=>res(true); s.onerror=()=>res(false);
+    document.head.appendChild(s);
+    setTimeout(()=>res(!!window.supabase),4000); // never hang the app
+  });
+}
+async function initCloud(){
+  try{
+    const ok=await loadSupabase();
+    if(ok && window.supabase && SB_URL && SB_ANON_KEY){ sb=window.supabase.createClient(SB_URL,SB_ANON_KEY); cloud=true; }
+  }catch(e){ cloud=false; }
+}
 function setSync(state){ // 'local' | 'sync' | 'ok' | 'off'
   const chip=document.getElementById("syncChip"); const txt=document.getElementById("syncTxt");
   chip.className="sync "+(state==="ok"?"ok":state==="sync"?"sync":state==="off"?"off":"");
@@ -525,20 +539,23 @@ function openApp(){
   document.getElementById("gate").classList.add("hide");
   document.getElementById("appWrap").classList.remove("hide");
   document.getElementById("tabs").classList.remove("hide");
-  renderToday();renderLibrary();
-  pullCloud().then(()=>{ entry=ensure(currentDate); if(!entry.workout)entry.workout=autoWorkout(); renderToday(); });
+  try{ renderToday(); renderLibrary(); }catch(e){ console.error(e); }
+  initCloud().then(()=>pullCloud()).then(()=>{ entry=ensure(currentDate); if(!entry.workout)entry.workout=autoWorkout(); renderToday(); }).catch(e=>{ console.warn(e); setSync("off"); });
 }
-const gi=document.getElementById("gateInput"),gb=document.getElementById("gateBtn");
+const gi=document.getElementById("gateInput"),gb=document.getElementById("gateBtn"),gh=document.querySelector("#gate .hint");
 function tryUnlock(){
-  if(gi.value===GATE_CODE){ store.set("nightlift_ok","1"); openApp(); }
+  const v=(gi.value||"").replace(/\D/g,"");
+  if(v===GATE_CODE){ store.set("nightlift_ok","1"); try{ openApp(); }catch(e){ if(gh) gh.textContent="Error: "+e.message; console.error(e); } }
   else{ gi.classList.add("bad"); setTimeout(()=>gi.classList.remove("bad"),400); gi.value=""; }
 }
-gb.onclick=tryUnlock;
-gi.addEventListener("input",()=>{ if(gi.value.length===4) tryUnlock(); });
-gi.addEventListener("keydown",e=>{ if(e.key==="Enter") tryUnlock(); });
+gb.addEventListener("click",tryUnlock);
+gi.addEventListener("input",()=>{ if((gi.value||"").replace(/\D/g,"").length>=4) tryUnlock(); });
+gi.addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); tryUnlock(); } });
 
-if(store.get("nightlift_ok")==="1"){ openApp(); }
-else { setTimeout(()=>gi.focus(),200); }
+try{
+  if(store.get("nightlift_ok")==="1"){ openApp(); }
+  else { setTimeout(()=>{ try{ gi.focus(); }catch(e){} },200); }
+}catch(e){ if(gh) gh.textContent="Error: "+e.message; console.error(e); }
 </script>
 </body>
 </html>
