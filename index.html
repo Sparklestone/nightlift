@@ -189,6 +189,12 @@
   .figsvg .grd{stroke:var(--faint);stroke-width:2;stroke-dasharray:3 4}
   .figsvg .eq{stroke:var(--gold);stroke-width:3;fill:none}
   .figsvg .eqf{fill:var(--gold);stroke:none}
+  .setpill input::placeholder{font-family:'Hanken Grotesk';font-weight:700;font-size:14px;letter-spacing:0;color:var(--faint);opacity:1}
+  .setpill.amrap input::placeholder{color:var(--ember)}
+  .figwrap{display:flex;flex-direction:column;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;margin:0 0 12px}
+  .figbox{width:170px;max-width:62%}
+  .figbox .figsvg{width:100%;height:auto;display:block}
+  .figcap{margin-top:6px;font-size:14px;font-weight:700;color:var(--ember);letter-spacing:.06em;text-transform:uppercase}
 </style>
 </head>
 <body>
@@ -507,7 +513,32 @@ const POSES={
   d4:[["Plank",{head:[102,70],sh:[90,74],hip:[58,82],elb:[90,92],hand:[90,108],kneeF:[40,86],ankF:[22,108],kneeB:[40,88],ankB:[22,110],load:'db',floor:110}],["Row",{head:[102,70],sh:[90,74],hip:[58,82],elb:[80,80],hand:[78,90],kneeF:[40,86],ankF:[22,108],kneeB:[40,88],ankB:[22,110],load:'db',floor:110}]],
   d5:[["Hold",{head:[102,72],sh:[90,76],hip:[58,84],elb:[90,92],hand:[88,108],kneeF:[40,88],ankF:[22,108],kneeB:[40,90],ankB:[22,110],floor:110}]]
 };
-function figFrames(id){const fr=POSES[id];if(!fr)return'';return'<div class="figrow">'+fr.map(f=>'<div class="figframe">'+fig(f[1])+'<div class="cap">'+f[0]+'</div></div>').join('')+'</div>';}
+function figFrames(id){if(!POSES[id])return'';return'<div class="figwrap"><div class="figbox" data-fig="'+id+'">'+fig(POSES[id][0][1])+'</div><div class="figcap" data-cap="'+id+'">'+POSES[id][0][0]+'</div></div>';}
+function repTarget(r){r=(r||"").toLowerCase();if(r.indexOf("failure")>=0)return"MAX";return r.replace(/\/.*$/,"").replace("sec","").trim();}
+
+/* ---- slow looping animation between the pose frames ---- */
+let animFigs=[],animOn=false,lastDraw=0;
+function initFigs(){
+  animFigs=Array.prototype.slice.call(document.querySelectorAll('[data-fig]')).map(el=>({el:el,id:el.getAttribute('data-fig'),cap:el.parentNode?el.parentNode.querySelector('[data-cap]'):null}));
+  if(!animOn){animOn=true;requestAnimationFrame(animTick);}
+}
+function lerpPose(a,b,e){const ks=['head','sh','hip','elb','hand','kneeF','ankF','kneeB','ankB'],o={load:a.load,floor:a.floor};ks.forEach(k=>{o[k]=[a[k][0]+(b[k][0]-a[k][0])*e,a[k][1]+(b[k][1]-a[k][1])*e];});return o;}
+function animTick(ts){
+  if(ts-lastDraw>33){ lastDraw=ts; const SEG=1500;
+    for(const f of animFigs){
+      const fr=POSES[f.id]; if(!fr)continue;
+      const ex=f.el.closest?f.el.closest('.ex'):null;
+      if(ex && !ex.classList.contains('open')) continue; // only animate the open exercise
+      const seq=fr.concat(fr.slice(1,-1).reverse());      // ping-pong through the frames
+      const total=seq.length*SEG, t=ts%total, i=Math.floor(t/SEG), frac=(t%SEG)/SEG;
+      const e=0.5-0.5*Math.cos(Math.PI*frac);             // ease in/out
+      const nxt=(i+1)%seq.length;
+      f.el.innerHTML=fig(lerpPose(seq[i][1],seq[nxt][1],e));
+      if(f.cap) f.cap.textContent=(frac<0.5?seq[i][0]:seq[nxt][0]);
+    }
+  }
+  requestAnimationFrame(animTick);
+}
 
 /* ===================== helpers ===================== */
 const today=()=>new Date().toISOString().slice(0,10);
@@ -532,7 +563,7 @@ function renderExList(){
     let sets="";
     for(let s=0;s<ex.sets;s++){
       const isLast=ex.amrap&&s===ex.sets-1;
-      sets+='<div class="setpill'+(isLast?' amrap':'')+'"><label>'+(isLast?'Failure':'Set '+(s+1))+'</label><input type="number" inputmode="numeric" min="0" data-ex="'+ex.id+'" data-set="'+s+'" value="'+(saved[s]||"")+'" placeholder="–"></div>';
+      sets+='<div class="setpill'+(isLast?' amrap':'')+'"><label>'+(isLast?'Failure':'Set '+(s+1))+'</label><input type="number" inputmode="numeric" min="0" data-ex="'+ex.id+'" data-set="'+s+'" value="'+(saved[s]||"")+'" placeholder="'+(isLast?'MAX':repTarget(ex.reps))+'"></div>';
     }
     el.innerHTML=
       '<div class="ex-head">'+
@@ -546,7 +577,7 @@ function renderExList(){
         ex.cues.map(c=>'<div class="cue">'+c+'</div>').join('')+
         '<div class="tech"><b>Coach:</b> '+ex.tech+'</div>'+
         '<div class="prog"><b>Level up:</b> '+ex.prog+'</div>'+
-        '<div class="setrow">'+sets+'<span class="lg">reps / set</span></div>'+
+        '<div class="setrow">'+sets+'<span class="lg">grey = target · tap to log actual</span></div>'+
       '</div></div>';
     el.querySelector(".ex-head").onclick=e=>{if(e.target.closest(".ex-check"))return;el.classList.toggle("open");};
     el.querySelector(".ex-check").onclick=e=>{e.stopPropagation();
@@ -566,6 +597,7 @@ function renderExList(){
       persist(currentDate);renderRing();updateStreakLine();refreshChecks();
     });
   });
+  initFigs();
 }
 function refreshChecks(){document.querySelectorAll("#exList .ex").forEach((el,i)=>{const ex=PROGRAM[entry.workout].ex[i];const s=entry.sets[ex.id];el.classList.toggle("done",!!(s&&s.some(v=>+v>0)));});}
 function renderCreatine(){document.getElementById("creatineToggle").classList.toggle("on",entry.creatine);}
