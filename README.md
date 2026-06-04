@@ -1,29 +1,61 @@
-# NIGHTLIFT
+# NIGHTLIFT — crew edition
 
-Self-contained nighttime strength tracker. One file (`index.html`), no build step.
-Cloud-synced to your Supabase, cached locally so it works offline too.
+Self-contained nighttime strength tracker. Now multi-user, cloud-synced, with a
+group/social layer and optional AI exercise swaps.
 
-## Already wired
-- **Login code:** 7880 (client-side gate; stored after first unlock)
-- **Supabase project:** xcgdnzypisbzxhaooswb
-- **Table:** public.nightlift_log  (created, RLS on, anon read/write policy)
-- URL + anon key are already in the CONFIG block at the top of the <script>.
+## Files
 
-## Deploy to Vercel
-1. vercel.com → Add New → Project
-2. Drop this folder. Framework preset: **Other**. Deploy.
-No env vars, no npm install. Open it on your phone AND laptop — same data.
+- `index.html` — the whole app (no build step)
+- `api/replace.js` — serverless function for the “Replace exercise” AI feature
 
-## How sync works
-Every change upserts that day's row to Supabase and caches to localStorage.
-On open it pulls the cloud copy (cloud wins for shared dates, local-only days
-get pushed up). The dot by the date shows: cloud synced / syncing / offline.
+## Users / codes
 
-## Heads up on security
-A 4-digit code + a public anon key is a casual gate, not real auth — the key
-ships in the page source and the table is readable by anyone who has both the
-URL and key. Fine for personal workout logs (low sensitivity). If you ever want
-real per-user auth, that's a Supabase Auth add-on I can wire later.
+- Aaron — 7880
+- Sean — 1221
+- Abe — 7886
+  Each code logs in a separate user with their own progress, stats, profile, and
+  exercise swaps. Codes live in the CONFIG block at the top of the <script> (the
+  `USERS` map) — edit there to change.
 
-## Change the code
-Edit `const GATE_CODE = "7880"` near the top of the <script>.
+## Already wired (Supabase project xcgdnzypisbzxhaooswb)
+
+- `nightlift_log`  — per-user daily logs (primary key user_id + log_date)
+- `nightlift_profile` — per-user height/weight/name + AI exercise swaps
+- `nightlift_wall` — shared taunt/support messages
+  All have RLS on with an anon read/write policy. URL + anon key are baked into the
+  CONFIG block.
+
+## Deploy
+
+Already on Vercel via the GitHub repo. To update: upload both files to the repo
+(put `replace.js` inside an `api/` folder) and Vercel auto-redeploys.
+
+GitHub web tip for the function: use **Add file → Create new file**, name it
+`api/replace.js` (typing the slash makes the folder), paste the contents, commit.
+
+## Turn on the AI “Replace exercise” feature
+
+This is the only part that needs setup. On a public site you can’t use a Claude.ai
+subscription — you need an **Anthropic API key** (separate, pay-per-use):
+
+1. Get a key at console.anthropic.com → API Keys.
+1. Vercel → your `nightlift` project → **Settings → Environment Variables**.
+1. Add `ANTHROPIC_API_KEY` = your key. Apply to Production. Redeploy.
+1. Make sure `api/replace.js` is in the repo.
+
+The key stays server-side (in the function) — users never see it. Each swap costs
+a few cents of API usage. Without the key, everything else works; tapping Replace
+just shows a friendly error.
+
+## Crew tab
+
+- This-week standings for all three; 👑 leader, 🪣 last place = “Tub-o-Shit”.
+  Ranked by sessions completed, ties broken by total reps. Resets Sundays.
+- Message wall: send a 🔥 taunt or 💪 support to one person or everyone.
+- Profile: edit your height/weight (used for stats and to tailor AI swaps).
+- “Switch user” logs out so a different code can sign in on the same device.
+
+## Security note (unchanged)
+
+The 4-digit codes + public anon key are a casual gate, not real auth. Fine for a
+crew’s workout logs. Real per-user auth would be a Supabase Auth add-on.
