@@ -221,6 +221,14 @@
   .profrow{display:flex;gap:10px;margin-top:10px}
   .profrow label{flex:1 1 0;min-width:0;font-size:12px;color:var(--muted);font-weight:700;display:flex;flex-direction:column;gap:5px}
   .profrow input{width:100%;box-sizing:border-box;background:var(--panel-2);border:1px solid var(--line);color:var(--ink);font-family:inherit;font-size:18px;padding:10px;border-radius:10px;outline:none}
+  .eqgroup{margin-top:14px}
+  .eqhead{font-size:12px;color:var(--muted);font-weight:700;margin-bottom:7px;text-transform:uppercase;letter-spacing:.04em}
+  .eqhead span{color:var(--faint);font-weight:600;text-transform:none;letter-spacing:0;margin-left:6px;font-size:11px}
+  .eqrow{display:flex;gap:8px;margin-bottom:7px}
+  .eqrow .eqw{flex:0 0 84px;width:84px;box-sizing:border-box;background:var(--panel-2);border:1px solid var(--line);color:var(--ink);font-family:inherit;font-size:18px;padding:10px;border-radius:10px;outline:none}
+  .eqseg{display:flex;gap:6px;flex:1 1 0;min-width:0}
+  .eqseg button{flex:1 1 0;min-width:0;background:var(--panel-2);border:1px solid var(--line);color:var(--muted);font-family:inherit;font-weight:700;font-size:14px;padding:8px;border-radius:10px;cursor:pointer}
+  .eqseg button.on{border-color:var(--ember);color:var(--ember);background:rgba(255,106,61,.08)}
 </style>
 </head>
 <body>
@@ -370,12 +378,16 @@
         <label>Height <input id="pfH" type="text" placeholder="5'11&quot;"></label>
         <label>Weight (lb) <input id="pfW" type="text" inputmode="decimal" placeholder="190"></label>
       </div>
-      <div class="profrow">
-        <label>Kettlebells (lb) <input id="pfKB" type="text" inputmode="numeric" placeholder="25"></label>
-        <label>Dumbbells (lb each) <input id="pfDB" type="text" inputmode="numeric" placeholder="10"></label>
+      <div class="eqgroup">
+        <div class="eqhead">Kettlebells <span>up to 3 · single or pair</span></div>
+        <div id="kbRows"></div>
+      </div>
+      <div class="eqgroup">
+        <div class="eqhead">Dumbbells <span>up to 3 · single or pair</span></div>
+        <div id="dbRows"></div>
       </div>
       <button id="pfSave" type="button" class="finish" style="font-size:18px;margin-top:12px">SAVE PROFILE</button>
-      <p class="note" style="margin-top:10px">Loads and reps adapt to the weights you list — heavier means fewer reps, lighter means more. List several, e.g. <b>10, 25</b>.</p>
+      <p class="note" style="margin-top:10px">Loads and reps adapt to your gear — heavier means fewer reps, lighter means more. Enter up to three of each and mark whether you own a single or a pair.</p>
     </div>
     <div class="card">
       <span class="eyebrow">Gear coach · what to buy next</span>
@@ -612,8 +624,11 @@ function esc(s){return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>
 /* ---- equipment-aware load & rep adaptation ---- */
 const LIGHT_PAT={raise:1,curl:1,rearfly:1};
 const LIGHT_CAT={sidedelts:1,biceps:1,reardelts:1};
-function ownedKB(){const e=PROFILE.equipment||{};return (Array.isArray(e.kb)?e.kb:[]).slice().sort((a,b)=>a-b);}
-function ownedDB(){const e=PROFILE.equipment||{};return (Array.isArray(e.db)?e.db:[]).slice().sort((a,b)=>a-b);}
+function eqList(type){const e=PROFILE.equipment||{};const arr=Array.isArray(e[type])?e[type]:[];return arr.map(x=>typeof x==="number"?{w:x,pair:type==="db"}:{w:+(x&&x.w),pair:!!(x&&x.pair)}).filter(o=>o.w>0).sort((a,b)=>a.w-b.w);}
+function singlesOf(type){return eqList(type).map(o=>o.w);}
+function pairsOf(type){return eqList(type).filter(o=>o.pair).map(o=>o.w);}
+function ownedKB(){return singlesOf("kb");}
+function ownedDB(){return singlesOf("db");}
 function implType(load){if(/KB/.test(load))return"kb";if(/DB/.test(load))return"db";return"bw";}
 function dbCount(load){return /^\s*1×/.test(load)?1:2;}
 function isLight(ex){return !!((ex.pattern&&LIGHT_PAT[ex.pattern])||LIGHT_CAT[EX_CAT[ex.id]]);}
@@ -631,14 +646,17 @@ function adapt(ex){
   const t=implType(ex.load); if(t==="bw")return{load:ex.load,reps:ex.reps,note:""};
   const light=isLight(ex);
   if(t==="kb"){
-    const w=pickW(ownedKB(),light);
+    const w=pickW(singlesOf("kb"),light);
     if(w!=null)return{load:w+" KB",reps:scaleReps(ex.reps,25,w),note:""};
-    const d=pickW(ownedDB(),light); if(d!=null)return{load:"2×"+d+" DB",reps:scaleReps(ex.reps,25,d),note:"(no KB — using DBs)"};
+    const dp=pickW(pairsOf("db"),light); if(dp!=null)return{load:"2×"+dp+" DB",reps:scaleReps(ex.reps,25,dp),note:"(no KB — using DBs)"};
+    const ds=pickW(singlesOf("db"),light); if(ds!=null)return{load:"1×"+ds+" DB",reps:scaleReps(ex.reps,25,ds),note:"(no KB — single DB)"};
     return{load:"Bodyweight",reps:ex.reps,note:"(add a kettlebell)"};
   } else {
-    const w=pickW(ownedDB(),light);
-    if(w!=null)return{load:dbCount(ex.load)+"×"+w+" DB",reps:scaleReps(ex.reps,10,w),note:""};
-    const k=pickW(ownedKB(),light); if(k!=null)return{load:k+" KB",reps:scaleReps(ex.reps,10,k),note:"(no DB — using KB)"};
+    const needPair=dbCount(ex.load)===2;
+    const w=pickW(needPair?pairsOf("db"):singlesOf("db"),light);
+    if(w!=null)return{load:(needPair?2:1)+"×"+w+" DB",reps:scaleReps(ex.reps,10,w),note:""};
+    if(needPair){const s=pickW(singlesOf("db"),light); if(s!=null)return{load:"1×"+s+" DB",reps:scaleReps(ex.reps,10,s),note:"(single — alternate arms)"};}
+    const k=pickW(singlesOf("kb"),light); if(k!=null)return{load:k+" KB",reps:scaleReps(ex.reps,10,k),note:"(no DB — using KB)"};
     return{load:"Bodyweight",reps:ex.reps,note:"(add dumbbells)"};
   }
 }
@@ -930,9 +948,7 @@ async function renderCrew(){
   const pfH=document.getElementById("pfH"),pfW=document.getElementById("pfW");
   if(pfH&&!pfH.value)pfH.value=PROFILE.height||"";
   if(pfW&&!pfW.value)pfW.value=PROFILE.weight||"";
-  const pfKB=document.getElementById("pfKB"),pfDB=document.getElementById("pfDB");
-  if(pfKB&&!pfKB.value)pfKB.value=ownedKB().join(", ");
-  if(pfDB&&!pfDB.value)pfDB.value=ownedDB().join(", ");
+  buildEqRows();
   renderGear();
   if(!cloud){board.innerHTML='<p class="note">Crew stats need a connection.</p>';return;}
   board.innerHTML='<p class="note">Loading…</p>';
@@ -988,9 +1004,18 @@ document.querySelectorAll("nav.tabs button").forEach(btn=>{btn.onclick=()=>{docu
 
 /* crew controls */
 function renderGear(){const g=document.getElementById("gearTips");if(!g)return;g.innerHTML=gearAdvice().map(t=>'<p class="note" style="margin-top:8px">• '+t+'</p>').join('');}
+function eqRow(type,idx,w,pair){return '<div class="eqrow"><input class="eqw" data-type="'+type+'" data-idx="'+idx+'" type="number" inputmode="numeric" min="0" placeholder="lb" value="'+(w||"")+'"><div class="eqseg" data-type="'+type+'" data-idx="'+idx+'"><button type="button" data-pair="0"'+(pair?'':' class="on"')+'>Single</button><button type="button" data-pair="1"'+(pair?' class="on"':'')+'>Pair</button></div></div>';}
+function buildEqRows(){
+  const kc=document.getElementById("kbRows"),dc=document.getElementById("dbRows");
+  const kb=eqList("kb"),db=eqList("db");
+  if(kc){let h="";for(let i=0;i<3;i++){const o=kb[i]||{w:"",pair:false};h+=eqRow("kb",i,o.w,o.pair);}kc.innerHTML=h;}
+  if(dc){let h="";for(let i=0;i<3;i++){const o=db[i]||{w:"",pair:false};h+=eqRow("db",i,o.w,o.pair);}dc.innerHTML=h;}
+  document.querySelectorAll(".eqseg").forEach(seg=>seg.querySelectorAll("button").forEach(b=>b.onclick=()=>{seg.querySelectorAll("button").forEach(x=>x.classList.remove("on"));b.classList.add("on");}));
+}
+function readEq(type){const out=[],seen={};document.querySelectorAll('.eqw[data-type="'+type+'"]').forEach(inp=>{const w=parseFloat(inp.value);if(isNaN(w)||w<=0)return;const idx=inp.getAttribute("data-idx");const seg=document.querySelector('.eqseg[data-type="'+type+'"][data-idx="'+idx+'"]');const on=seg?seg.querySelector("button.on"):null;const pair=on?on.getAttribute("data-pair")==="1":false;const k=w+"/"+pair;if(seen[k])return;seen[k]=1;out.push({w:w,pair:pair});});return out.slice(0,3).sort((a,b)=>a.w-b.w);}
 document.querySelectorAll("#kindSeg button").forEach(b=>b.onclick=()=>{document.querySelectorAll("#kindSeg button").forEach(x=>x.classList.remove("on"));b.classList.add("on");});
 document.getElementById("msgSend").onclick=sendMsg;
-document.getElementById("pfSave").onclick=()=>{PROFILE.height=document.getElementById("pfH").value.trim();PROFILE.weight=document.getElementById("pfW").value.trim();PROFILE.equipment={kb:parseWeights(document.getElementById("pfKB").value),db:parseWeights(document.getElementById("pfDB").value)};saveProfile();renderToday();renderGear();const b=document.getElementById("pfSave");b.textContent="SAVED ✓";setTimeout(()=>b.textContent="SAVE PROFILE",1200);};
+document.getElementById("pfSave").onclick=()=>{PROFILE.height=document.getElementById("pfH").value.trim();PROFILE.weight=document.getElementById("pfW").value.trim();PROFILE.equipment={kb:readEq("kb"),db:readEq("db")};saveProfile();renderToday();buildEqRows();renderGear();const b=document.getElementById("pfSave");b.textContent="SAVED ✓";setTimeout(()=>b.textContent="SAVE PROFILE",1200);};
 var _lo=document.getElementById("logoutBottom"); if(_lo)_lo.onclick=()=>{store.set("nightlift_code","");try{location.reload();}catch(e){}};
 
 /* ===================== gate + boot ===================== */
