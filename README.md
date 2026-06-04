@@ -1,61 +1,49 @@
 # NIGHTLIFT — crew edition
 
-Self-contained nighttime strength tracker. Now multi-user, cloud-synced, with a
-group/social layer and optional AI exercise swaps.
+Self-contained nighttime strength tracker. Multi-user, cloud-synced, with a
+group/social layer and a large built-in exercise bank for instant swaps.
 
-## Files
+## File
 
-- `index.html` — the whole app (no build step)
-- `api/replace.js` — serverless function for the “Replace exercise” AI feature
+- `index.html` — the whole app. No build step, no serverless function, no API key.
 
 ## Users / codes
 
-- Aaron — 7880
-- Sean — 1221
-- Abe — 7886
-  Each code logs in a separate user with their own progress, stats, profile, and
-  exercise swaps. Codes live in the CONFIG block at the top of the <script> (the
-  `USERS` map) — edit there to change.
+- Aaron — 7880   ·   Sean — 1221   ·   Abe — 7886
+  Each code is its own user (own progress, stats, profile, swaps). Edit the `USERS`
+  map at the top of the <script> to change codes/names.
 
-## Already wired (Supabase project xcgdnzypisbzxhaooswb)
+## Replace exercise (now offline + free)
 
-- `nightlift_log`  — per-user daily logs (primary key user_id + log_date)
-- `nightlift_profile` — per-user height/weight/name + AI exercise swaps
-- `nightlift_wall` — shared taunt/support messages
-  All have RLS on with an anon read/write policy. URL + anon key are baked into the
-  CONFIG block.
+Every exercise has a ↻ Replace button. It instantly swaps in a different exercise
+from a built-in bank of ~90 moves (same muscle group, your equipment only, not a
+duplicate of what’s already in the day), with cues, sets/reps, a progression note,
+and a matching animation. “Undo swap” reverts. No API key, no cost, works offline.
 
-## Deploy
+> The earlier AI version (api/replace.js + an ANTHROPIC_API_KEY env var) is no
+> longer used. You can delete that file from the repo and remove the env var if
+> you added it — nothing depends on them now.
 
-Already on Vercel via the GitHub repo. To update: upload both files to the repo
-(put `replace.js` inside an `api/` folder) and Vercel auto-redeploys.
+## Supabase (project xcgdnzypisbzxhaooswb)
 
-GitHub web tip for the function: use **Add file → Create new file**, name it
-`api/replace.js` (typing the slash makes the folder), paste the contents, commit.
-
-## Turn on the AI “Replace exercise” feature
-
-This is the only part that needs setup. On a public site you can’t use a Claude.ai
-subscription — you need an **Anthropic API key** (separate, pay-per-use):
-
-1. Get a key at console.anthropic.com → API Keys.
-1. Vercel → your `nightlift` project → **Settings → Environment Variables**.
-1. Add `ANTHROPIC_API_KEY` = your key. Apply to Production. Redeploy.
-1. Make sure `api/replace.js` is in the repo.
-
-The key stays server-side (in the function) — users never see it. Each swap costs
-a few cents of API usage. Without the key, everything else works; tapping Replace
-just shows a friendly error.
+- nightlift_log — per-user daily logs (PK user_id + log_date)
+- nightlift_profile — per-user height/weight/name + swap overrides
+- nightlift_wall — shared taunt/support messages
+  RLS on, anon read/write. URL + anon key are baked into the CONFIG block.
 
 ## Crew tab
 
-- This-week standings for all three; 👑 leader, 🪣 last place = “Tub-o-Shit”.
-  Ranked by sessions completed, ties broken by total reps. Resets Sundays.
-- Message wall: send a 🔥 taunt or 💪 support to one person or everyone.
-- Profile: edit your height/weight (used for stats and to tailor AI swaps).
-- “Switch user” logs out so a different code can sign in on the same device.
+- Weekly standings for all three; 👑 leader, 🪣 last place = “Tub-o-Shit”
+  (by sessions, ties broken on total reps, resets Sundays).
+- Wall: send a 🔥 taunt or 💪 support to one person or everyone.
+- Profile: edit height/weight. “Switch user” to sign in as someone else.
 
-## Security note (unchanged)
+## Deploy
 
-The 4-digit codes + public anon key are a casual gate, not real auth. Fine for a
-crew’s workout logs. Real per-user auth would be a Supabase Auth add-on.
+Upload `index.html` to the repo → Vercel auto-redeploys. That’s the only file
+needed now.
+
+## Security note
+
+4-digit codes + public anon key = a casual gate, not real auth. Fine for a crew’s
+workout logs.

@@ -593,23 +593,143 @@ function figFrames(id){if(!POSES[id])return'';return'<div class="figwrap"><div c
 function repTarget(r){r=(r||"").toLowerCase();if(r.indexOf("failure")>=0)return"MAX";return r.replace(/\/.*$/,"").replace("sec","").trim();}
 
 /* ===================== per-user program (with AI swaps) ===================== */
-function dayEx(workout){return PROGRAM[workout].ex.map(ex=>{const o=PROFILE.overrides&&PROFILE.overrides[ex.id];return o?Object.assign({},ex,o,{id:ex.id}):ex;});}
+function dayEx(workout){return PROGRAM[workout].ex.map(ex=>{const o=PROFILE.overrides&&PROFILE.overrides[ex.id];return o?Object.assign({},ex,o,{id:ex.id,star:0}):ex;});}
 function poseId(ex){return ex.pattern?(PATTERN_POSE[ex.pattern]||""):ex.id;}
 function esc(s){return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
-async function replaceExercise(ex,btn){
-  const others=dayEx(entry.workout).filter(e=>e.id!==ex.id).map(e=>e.name);
-  const ctx={user:{name:PROFILE.name,height:PROFILE.height,weight:PROFILE.weight},day:PROGRAM[entry.workout].name,replacing:{name:ex.name,muscle:ex.musc},avoid:others,equipment:"one 25 lb kettlebell, two 10 lb dumbbells, and bodyweight only"};
-  if(btn){btn.disabled=true;btn.textContent="Thinking…";}
-  try{
-    const r=await fetch("/api/replace",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(ctx)});
-    const data=await r.json();
-    if(!r.ok||data.error) throw new Error(data.error||("HTTP "+r.status));
-    const nx={name:String(data.name||"New Exercise"),musc:String(data.musc||ex.musc),load:String(data.load||ex.load),sets:Math.max(1,Math.min(5,parseInt(data.sets)||ex.sets)),reps:String(data.reps||ex.reps),cues:Array.isArray(data.cues)?data.cues.slice(0,4).map(String):ex.cues,tech:String(data.tech||""),prog:String(data.prog||""),pattern:String(data.pattern||""),amrap:!!data.amrap,replaced:true};
-    PROFILE.overrides[ex.id]=nx; saveProfile(); renderToday();
-  }catch(e){
-    if(btn){btn.disabled=false;btn.textContent="↻ Replace";}
-    alert("Couldn't fetch a replacement: "+e.message+"\n\nThe AI swap needs ANTHROPIC_API_KEY set in Vercel (see README). Everything else works without it.");
-  }
+/* ===================== exercise bank (offline AI-free swaps) ===================== */
+const EX_CAT={a1:"quads",a2:"hamstrings",a3:"quads",a4:"calves",b1:"chest",b2:"chest",b3:"shoulders",b4:"sidedelts",c1:"back",c2:"back",c3:"biceps",c4:"reardelts",d1:"posterior",d2:"quads",d3:"chest",d4:"core",d5:"core"};
+const BANK={
+quads:[
+{name:"Goblet Squat",musc:"Quads · glutes",load:"25 KB",sets:3,reps:"15–20",pattern:"squat",amrap:true,cues:["Bell at your chest, elbows tucked.","Sit down for 3 slow seconds, chest tall.","Drive through the heels to stand."],tech:"Last set to failure — light load means high reps build the legs.",prog:"Add a 2-sec pause at the bottom."},
+{name:"Bulgarian Split Squat",musc:"Quads · glutes",load:"2×10 DB",sets:3,reps:"10–15 / leg",pattern:"splitsquat",amrap:true,cues:["Rear foot up on a couch behind you.","Drop the back knee straight down, 3 sec.","Drive through the front heel."],tech:"Unilateral work doubles the effective load.",prog:"Add a 1-sec bottom pause, then reps."},
+{name:"Reverse Lunge",musc:"Quads · glutes",load:"2×10 DB",sets:3,reps:"10–12 / leg",pattern:"lunge",cues:["A DB each hand, step back, drop the knee.","Stay tall, push the front heel to stand.","Alternate legs under control."],tech:"Joint-friendly and great for balance.",prog:"Slow the descent, then elevate the front foot."},
+{name:"Front-Rack KB Squat",musc:"Quads · glutes",load:"25 KB",sets:3,reps:"12–15",pattern:"squat",cues:["Bell racked on the wrist at the shoulder.","Squat down tall and controlled.","Stand and brace the core hard."],tech:"The front load forces an upright torso and hammers the quads.",prog:"Add a 2-sec pause in the hole."},
+{name:"Tempo Goblet Squat",musc:"Quads · glutes",load:"25 KB",sets:3,reps:"10–12",pattern:"squat",cues:["Bell at chest, 5-second lower.","Pause 1 sec at the bottom.","Stand normally, repeat."],tech:"Slowing the eccentric makes 25 lb feel like much more.",prog:"Extend the lower to 6 seconds."},
+{name:"Split Squat",musc:"Quads · glutes",load:"2×10 DB",sets:3,reps:"12–15 / leg",pattern:"splitsquat",amrap:true,cues:["Stagger your stance, weights at your sides.","Drop straight down, front shin vertical.","Push up through the front heel."],tech:"Simpler than the Bulgarian but still loads each leg.",prog:"Elevate the rear foot to progress."},
+{name:"Bodyweight Squat Burnout",musc:"Quads · glutes",load:"Bodyweight",sets:3,reps:"to failure",pattern:"squat",amrap:true,cues:["Feet shoulder width, arms forward.","Sit to full depth.","Stand fast, go until you can't."],tech:"No weight needed — chase a rep PR each set.",prog:"Slow the tempo, then go single-leg."},
+{name:"Curtsy Lunge",musc:"Quads · glutes",load:"2×10 DB",sets:3,reps:"10 / leg",pattern:"lunge",cues:["Step one foot back and across behind you.","Drop the back knee toward the floor.","Return to standing, alternate."],tech:"Hits the glutes and outer thigh from a new angle.",prog:"Add a bottom pause."},
+{name:"Cossack Squat",musc:"Quads · glutes · adductors",load:"1×10 DB",sets:3,reps:"8–10 / side",pattern:"lunge",cues:["Wide stance, shift over one bent leg.","Other leg straight, toes up.","Stay low as you shift side to side."],tech:"Builds the legs and serious hip mobility.",prog:"Hold the DB at the chest for more load."},
+{name:"1.5-Rep Goblet Squat",musc:"Quads · glutes",load:"25 KB",sets:3,reps:"8–10",pattern:"squat",amrap:true,cues:["Squat down, rise halfway, back down.","Then stand fully — that's one rep.","Chest tall throughout."],tech:"Doubles time under tension in the hardest range.",prog:"Add reps before a pause."}
+],
+hamstrings:[
+{name:"KB Romanian Deadlift",musc:"Hamstrings · glutes",load:"25 KB",sets:3,reps:"12–20",pattern:"hinge",cues:["Bell in both hands, soft knees.","Push hips back, bell skims the thighs.","Snap hips forward to stand tall."],tech:"3-sec lower; the loaded stretch grows hamstrings.",prog:"Progress to single-leg for more load."},
+{name:"Single-Leg RDL",musc:"Hamstrings · glutes",load:"1×10 DB",sets:3,reps:"10–12 / leg",pattern:"hinge",cues:["Weight in one hand, stand on one leg.","Hinge forward, back leg rises behind.","Feel the hamstring, return tall."],tech:"Loads each hamstring heavily and builds balance.",prog:"Slow the lower, then add reps."},
+{name:"DB Romanian Deadlift",musc:"Hamstrings · glutes",load:"2×10 DB",sets:3,reps:"12–15",pattern:"hinge",cues:["A DB each hand against the thighs.","Hips back, flat back, light knee bend.","Drive hips forward, squeeze glutes."],tech:"Keep tension — don't rest the weights at the top.",prog:"Add a 3-sec lower."},
+{name:"Staggered-Stance RDL",musc:"Hamstrings · glutes",load:"2×10 DB",sets:3,reps:"10–12 / side",pattern:"hinge",cues:["One foot slightly back on the toe.","Hinge over the front leg.","Most weight through the front heel."],tech:"A bridge between two-leg and single-leg RDLs.",prog:"Shift more weight to the front leg."},
+{name:"Good Morning",musc:"Hamstrings · glutes · back",load:"25 KB",sets:3,reps:"12–15",pattern:"hinge",cues:["Bell hugged at the chest.","Hinge forward with a flat back.","Stand by driving the hips through."],tech:"Trains the hinge and the spinal erectors together.",prog:"Slow the lower to 3 sec."},
+{name:"KB Sumo Deadlift",musc:"Hamstrings · glutes",load:"25 KB",sets:3,reps:"15–20",pattern:"hinge",cues:["Wide stance, bell between the feet.","Hinge and grab, flat back.","Stand tall, squeeze glutes."],tech:"The wide stance lets you load the hips hard.",prog:"Pause 1 sec just off the floor."},
+{name:"Glute Bridge March",musc:"Glutes · hamstrings",load:"Bodyweight",sets:3,reps:"10 / leg",pattern:"hinge",cues:["On your back, drive the hips up high.","Hold the bridge, lift one knee.","Alternate without dropping the hips."],tech:"Anti-drop core plus glute endurance.",prog:"Rest a DB on the hips."},
+{name:"Slow-Eccentric RDL",musc:"Hamstrings · glutes",load:"25 KB",sets:3,reps:"10–12",pattern:"hinge",cues:["Bell in both hands.","Take 4–5 seconds to lower.","Stand at a normal speed."],tech:"Eccentric overload is huge for hamstrings.",prog:"Lengthen to a 6-sec lower."}
+],
+calves:[
+{name:"Single-Leg Calf Raise",musc:"Calves",load:"25 KB",sets:2,reps:"15–20 / leg",pattern:"calf",amrap:true,cues:["Hold the bell one side, on one foot.","Rise up tall, pause at the top.","Lower slow for a deep stretch."],tech:"Last set to failure — calves love high reps.",prog:"Add a 2-sec bottom-stretch pause."},
+{name:"Double-Leg Calf Raise",musc:"Calves",load:"2×10 DB",sets:3,reps:"20–25",pattern:"calf",amrap:true,cues:["DB each hand, balls of feet on an edge.","Rise as high as possible.","Lower controlled, full stretch."],tech:"Big reps and a full stretch are the whole game.",prog:"Switch to single-leg once 25 is easy."},
+{name:"Paused Calf Raise",musc:"Calves",load:"25 KB",sets:3,reps:"15–20",pattern:"calf",cues:["Rise onto the toes.","Hold the top squeeze 2 seconds.","Lower slowly to a full stretch."],tech:"The top pause smokes the calves.",prog:"Add reps, then go single-leg."},
+{name:"Seated Calf Raise",musc:"Calves (soleus)",load:"2×10 DB",sets:3,reps:"20",pattern:"calf",cues:["Sit, DBs resting on the knees.","Push through the balls of the feet.","Full range, slow tempo."],tech:"Bent knees bias the soleus — different fibers.",prog:"Add a 1-sec top hold."},
+{name:"Tempo Calf Raise",musc:"Calves",load:"25 KB",sets:3,reps:"15",pattern:"calf",cues:["3 seconds up, 3 seconds down.","Full height at the top.","No bouncing at the bottom."],tech:"Slow tempo maximizes tension with light load.",prog:"Add reps before load."},
+{name:"Bodyweight Calf Burnout",musc:"Calves",load:"Bodyweight",sets:2,reps:"to failure",pattern:"calf",amrap:true,cues:["Tall on the balls of your feet.","Rep until you can't, full range.","Hold the last rep at the top."],tech:"Anywhere, anytime — chase the burn.",prog:"Move to single-leg."},
+{name:"Toes-Out Calf Raise",musc:"Calves (inner)",load:"2×10 DB",sets:3,reps:"20",pattern:"calf",cues:["Heels together, toes pointed out.","Rise tall, squeeze.","Slow descent."],tech:"Foot angle shifts the emphasis across the calf.",prog:"Try toes-in next time for variety."},
+{name:"Deficit Single-Leg Raise",musc:"Calves",load:"1×10 DB",sets:3,reps:"12–15 / leg",pattern:"calf",cues:["Ball of foot on a step edge.","Drop the heel below the step.","Drive up to full height."],tech:"The deficit adds a brutal stretch.",prog:"Add a bottom pause."}
+],
+chest:[
+{name:"Push-Ups",musc:"Chest · triceps",load:"Bodyweight",sets:3,reps:"to failure",pattern:"pushup",amrap:true,cues:["Hands just outside the shoulders.","Lower 2–3 sec, chest to floor.","Press up powerfully."],tech:"Your best chest builder — go to true failure.",prog:"Elevate the feet when reps pass 20."},
+{name:"KB Single-Arm Floor Press",musc:"Chest · triceps",load:"25 KB",sets:3,reps:"8–12 / side",pattern:"press",cues:["On your back, bell over the shoulder.","Lower until the arm touches the floor.","Press up and squeeze."],tech:"Heaviest pressing load you own.",prog:"Slow the lower to 3 sec."},
+{name:"DB Floor Press",musc:"Chest · triceps",load:"2×10 DB",sets:3,reps:"12–15",pattern:"press",cues:["DBs over the chest, on your back.","Lower until elbows touch the floor.","Press up, squeeze the chest."],tech:"Floor caps elbow depth — shoulder-friendly.",prog:"Pause 1 sec on the floor each rep."},
+{name:"Feet-Elevated Push-Ups",musc:"Chest (upper) · triceps",load:"Bodyweight",sets:3,reps:"to failure",pattern:"pushup",amrap:true,cues:["Feet up on a chair or couch.","Body in one straight line.","Lower with control, press up."],tech:"Shifts the load to the upper chest.",prog:"Add a deficit on the DBs."},
+{name:"Deficit Push-Ups",musc:"Chest · triceps",load:"2×10 DB",sets:3,reps:"to failure",pattern:"pushup",amrap:true,cues:["Grip the dumbbells as handles.","Lower past your hands for a stretch.","Press up to lockout."],tech:"The extra range hits more chest.",prog:"Elevate the feet too."},
+{name:"Tempo Push-Ups",musc:"Chest · triceps",load:"Bodyweight",sets:3,reps:"8–12",pattern:"pushup",cues:["3-sec lower, 1-sec pause at the bottom.","Press up under control.","Body locked in a plank."],tech:"Slow tempo turns easy reps into hard ones.",prog:"Lengthen the lower to 4–5 sec."},
+{name:"DB Squeeze Press",musc:"Chest · triceps",load:"2×10 DB",sets:3,reps:"12–15",pattern:"press",cues:["Press DBs together hard the whole time.","Lower to the chest, keep squeezing.","Press up without letting them part."],tech:"Constant squeeze lights up the inner chest.",prog:"Add a 2-sec lower."},
+{name:"Diamond Push-Ups",musc:"Chest · triceps",load:"Bodyweight",sets:3,reps:"to failure",pattern:"pushup",amrap:true,cues:["Hands together under the chest.","Elbows tuck back as you lower.","Press up, squeeze the triceps."],tech:"Triceps-biased push-up variation.",prog:"Elevate the feet."},
+{name:"Wide Push-Ups",musc:"Chest",load:"Bodyweight",sets:3,reps:"to failure",pattern:"pushup",amrap:true,cues:["Hands wider than the shoulders.","Lower the chest between the hands.","Press up with control."],tech:"Wider hands bias the chest over triceps.",prog:"Slow the tempo."},
+{name:"Eccentric Push-Ups",musc:"Chest · triceps",load:"Bodyweight",sets:3,reps:"6–10",pattern:"pushup",cues:["Take 5 full seconds to lower.","Touch the chest down.","Reset on the knees to press up."],tech:"Eccentric overload when push-ups get easy.",prog:"Add a rep each week."}
+],
+shoulders:[
+{name:"KB Strict Overhead Press",musc:"Shoulders · triceps",load:"25 KB",sets:3,reps:"6–10 / side",pattern:"overhead",cues:["Bell racked on the wrist, elbow in.","Brace, press straight overhead.","Lower controlled, switch."],tech:"Leave 1 rep in reserve — don't grind overhead.",prog:"Add reps, then a 3-sec lower."},
+{name:"DB Overhead Press",musc:"Shoulders · triceps",load:"2×10 DB",sets:3,reps:"10–12",pattern:"overhead",cues:["DBs at shoulder height, palms forward.","Press both straight up.","Lower to the ears, repeat."],tech:"Both arms at once for balanced shoulders.",prog:"Slow the lower to 3 sec."},
+{name:"KB Push Press",musc:"Shoulders · triceps",load:"25 KB",sets:3,reps:"8–10 / side",pattern:"overhead",cues:["Small dip with the legs.","Drive the bell overhead with leg power.","Lower slowly, switch sides."],tech:"Leg drive lets you overload the lowering.",prog:"Slow the lower further."},
+{name:"DB Arnold Press",musc:"Shoulders",load:"2×10 DB",sets:3,reps:"10–12",pattern:"overhead",cues:["Start palms facing you at the chest.","Rotate out as you press overhead.","Reverse the path coming down."],tech:"The rotation hits all three delt heads.",prog:"Add a pause at the top."},
+{name:"Half-Kneeling KB Press",musc:"Shoulders · core",load:"25 KB",sets:3,reps:"8 / side",pattern:"overhead",cues:["One knee down, bell racked same side.","Brace hard, press overhead.","No leaning — core stays tight."],tech:"Kneeling kills momentum and trains the core.",prog:"Move to tall-kneeling."},
+{name:"Pike Push-Ups",musc:"Shoulders · triceps",load:"Bodyweight",sets:3,reps:"to failure",pattern:"overhead",amrap:true,cues:["Hips high, body in an inverted V.","Lower the crown toward the floor.","Press back up."],tech:"Bodyweight overhead pressing.",prog:"Elevate the feet to add load."},
+{name:"DB Z-Press",musc:"Shoulders · core",load:"2×10 DB",sets:3,reps:"10",pattern:"overhead",cues:["Sit on the floor, legs straight.","Press the DBs overhead.","No back arch — brace the core."],tech:"Seated on the floor removes all leg drive.",prog:"Add a 2-sec top hold."},
+{name:"KB Tall-Kneeling Press",musc:"Shoulders · core",load:"25 KB",sets:3,reps:"8–10 / side",pattern:"overhead",cues:["Both knees down, squeeze the glutes.","Press the bell straight up.","Ribs down, no leaning back."],tech:"Maximum core demand, zero leg cheat.",prog:"Add reps before load."}
+],
+sidedelts:[
+{name:"DB Lateral Raise",musc:"Side delts",load:"2×10 DB",sets:3,reps:"15–20",pattern:"raise",amrap:true,cues:["Slight elbow bend, lead with the elbows.","Raise to shoulder height, no higher.","Lower slowly, no swinging."],tech:"Last set rest-pause: failure, rest 10 sec, more.",prog:"Add a 1-sec hold at the top."},
+{name:"Lean-Away Lateral Raise",musc:"Side delts",load:"1×10 DB",sets:3,reps:"12–15 / side",pattern:"raise",cues:["Hold something, lean away from the weight.","Raise the DB out to the side.","Control it all the way down."],tech:"Leaning adds range and tension at the bottom.",prog:"Slow the lower to 3 sec."},
+{name:"Paused Lateral Raise",musc:"Side delts",load:"2×10 DB",sets:3,reps:"12–15",pattern:"raise",cues:["Raise to shoulder height.","Hold 1 sec at the top.","Lower for 2 sec."],tech:"The pause removes momentum entirely.",prog:"Add reps."},
+{name:"DB Front Raise",musc:"Front delts",load:"2×10 DB",sets:3,reps:"12–15",pattern:"raise",cues:["Arms straight, raise the DBs to the front.","Stop at shoulder height.","Lower under control."],tech:"Hits the front delt to balance pressing.",prog:"Alternate arms for more focus."},
+{name:"1.5-Rep Lateral Raise",musc:"Side delts",load:"2×10 DB",sets:3,reps:"10–12",pattern:"raise",amrap:true,cues:["Raise full, lower halfway, raise full.","Then lower all the way — one rep.","Strict, no body english."],tech:"Doubles tension in the peak range.",prog:"Add reps before any load."},
+{name:"Eccentric Lateral Raise",musc:"Side delts",load:"2×10 DB",sets:3,reps:"12–15",pattern:"raise",cues:["Raise normally to the top.","Take 3–4 sec to lower.","Keep elbows leading."],tech:"Slow negatives grow delts with light weight.",prog:"Lengthen the lower."},
+{name:"Seated Lateral Raise",musc:"Side delts",load:"2×10 DB",sets:3,reps:"15",pattern:"raise",cues:["Sit tall, no swinging.","Raise out to the sides.","Lower slowly."],tech:"Seated kills the leg and hip cheat.",prog:"Add a top pause."},
+{name:"DB L-Raise",musc:"Side · front delts",load:"2×10 DB",sets:3,reps:"12",pattern:"raise",cues:["Raise out to the side to shoulder height.","Sweep the DBs to the front.","Reverse and lower."],tech:"Covers the side and front delt in one move.",prog:"Slow the whole path down."}
+],
+back:[
+{name:"KB Single-Arm Row",musc:"Lats · mid-back",load:"25 KB",sets:4,reps:"10–15 / side",pattern:"row",amrap:true,cues:["Hinge over, free hand on a knee.","Pull the bell to the hip, elbow tight.","Squeeze, lower 2 sec, switch."],tech:"A 4th set + slow negatives load the back.",prog:"1-sec squeeze at the top."},
+{name:"DB Bent-Over Row",musc:"Lats · mid-back",load:"2×10 DB",sets:3,reps:"12–15",pattern:"row",cues:["Hinge to 45°, flat back.","Row both DBs to the ribs.","Squeeze, lower slow."],tech:"Drive the elbows back, not up.",prog:"Add a 1-sec squeeze."},
+{name:"Chest-Supported Row",musc:"Mid-back · lats",load:"2×10 DB",sets:3,reps:"12–15",pattern:"row",cues:["Chest on an incline (couch arm).","Row the DBs up to your sides.","Squeeze the shoulder blades."],tech:"Support removes lower-back fatigue.",prog:"Pause at the top."},
+{name:"Single-Arm DB Row",musc:"Lats · mid-back",load:"1×10 DB",sets:3,reps:"12–15 / side",pattern:"row",cues:["One hand braced on a chair.","Row the DB to the hip.","Full stretch at the bottom, switch."],tech:"One arm lets you focus and get full range.",prog:"Add a pause and slow negative."},
+{name:"DB Gorilla Row",musc:"Lats · mid-back · core",load:"2×10 DB",sets:3,reps:"10 / side",pattern:"row",cues:["Hinge over, DBs hanging.","Row one up while the other hangs.","Alternate, brace the core."],tech:"Alternating keeps tension and adds core work.",prog:"Slow the lower."},
+{name:"KB High Pull",musc:"Traps · upper back",load:"25 KB",sets:3,reps:"12–15",pattern:"row",cues:["Bell in both hands, slight hinge.","Pull to chest height, elbows high.","Control it back down."],tech:"Hits the traps and rear shoulders.",prog:"Add reps before a set."},
+{name:"Seal-Style Row",musc:"Mid-back · lats",load:"2×10 DB",sets:3,reps:"12–15",pattern:"row",cues:["Lie face-down on a bench/bed edge.","Let the DBs hang, row to the ribs.","Squeeze, lower fully controlled."],tech:"The strictest row there is — zero momentum.",prog:"Add a 2-sec squeeze."},
+{name:"Wide-Grip DB Row",musc:"Upper back · rear delts",load:"2×10 DB",sets:3,reps:"12–15",pattern:"row",cues:["Hinge over, elbows flare wide.","Row the DBs toward the chest.","Squeeze the upper back."],tech:"Wide elbows bias the upper back.",prog:"Pause 1 sec at the top."},
+{name:"Batwing Row",musc:"Mid-back",load:"2×10 DB",sets:3,reps:"10",pattern:"row",cues:["Row both DBs to the ribs.","Hold the top squeeze 2–3 sec.","Lower slow."],tech:"Long top holds build a thick mid-back.",prog:"Extend the hold."}
+],
+biceps:[
+{name:"DB Bicep Curl",musc:"Biceps",load:"2×10 DB",sets:3,reps:"12–20",pattern:"curl",amrap:true,cues:["Elbows pinned to your sides.","Curl up without swinging.","Lower a full 3 sec."],tech:"Last set rest-pause to failure.",prog:"1-sec squeeze at the top."},
+{name:"DB Hammer Curl",musc:"Biceps · forearms",load:"2×10 DB",sets:3,reps:"12–15",pattern:"curl",cues:["Palms face each other (neutral).","Curl up, elbows still.","Lower slowly."],tech:"Hits the brachialis for thicker arms.",prog:"Slow the negative."},
+{name:"Cross-Body Hammer Curl",musc:"Biceps · forearms",load:"2×10 DB",sets:3,reps:"10–12 / side",pattern:"curl",cues:["Curl across to the opposite shoulder.","Keep the elbow pinned.","Lower and alternate."],tech:"The cross-body path loads the brachialis hard.",prog:"Add a 1-sec squeeze."},
+{name:"Concentration Curl",musc:"Biceps",load:"1×10 DB",sets:3,reps:"12–15 / side",pattern:"curl",cues:["Seated, elbow braced on the inner thigh.","Curl with zero swing.","Squeeze hard at the top."],tech:"Maximum isolation and peak contraction.",prog:"Slow the lower to 4 sec."},
+{name:"Zottman Curl",musc:"Biceps · forearms",load:"2×10 DB",sets:3,reps:"12",pattern:"curl",cues:["Curl up palms-up.","Rotate to palms-down at the top.","Lower slowly palms-down."],tech:"Trains the biceps up and forearms down.",prog:"Slow the negative further."},
+{name:"DB 21s",musc:"Biceps",load:"2×10 DB",sets:3,reps:"21",pattern:"curl",cues:["7 reps bottom-half, 7 reps top-half.","Then 7 full reps.","Strict the whole way."],tech:"Brutal volume in every part of the range.",prog:"Slow each portion."},
+{name:"Slow-Eccentric Curl",musc:"Biceps",load:"2×10 DB",sets:3,reps:"10–12",pattern:"curl",cues:["Curl up normally.","Take 4–5 sec to lower.","No swinging."],tech:"Negatives drive biceps growth with light DBs.",prog:"Lengthen the lower."},
+{name:"KB Two-Hand Curl",musc:"Biceps",load:"25 KB",sets:3,reps:"10–12",pattern:"curl",cues:["Hold the bell by the horns, both hands.","Curl up, elbows tucked.","Lower under control."],tech:"The 25 lb bell adds load past the 10s.",prog:"Add a 1-sec top squeeze."},
+{name:"Paused Curl",musc:"Biceps",load:"2×10 DB",sets:3,reps:"12–15",pattern:"curl",amrap:true,cues:["Curl to the top.","Hold and squeeze 1–2 sec.","Lower slow."],tech:"The squeeze hold maximizes the contraction.",prog:"Rest-pause the last set."}
+],
+reardelts:[
+{name:"DB Rear-Delt Fly",musc:"Rear delts · upper back",load:"2×10 DB",sets:3,reps:"15–20",pattern:"rearfly",cues:["Hinge to 45°, slight elbow bend.","Open the arms wide like wings.","Lead with the elbows, squeeze."],tech:"Strict, no momentum — posture insurance.",prog:"Add a 1-sec hold at the top."},
+{name:"Seated Rear-Delt Fly",musc:"Rear delts",load:"2×10 DB",sets:3,reps:"15",pattern:"rearfly",cues:["Sit, chest down toward the thighs.","Fly the DBs out and back.","Squeeze the rear delts."],tech:"Seated stabilizes you for stricter reps.",prog:"Slow the lower."},
+{name:"Prone Y-Raise",musc:"Lower traps · rear delts",load:"2×10 DB",sets:3,reps:"12–15",pattern:"rearfly",cues:["Face-down, arms in a Y overhead.","Raise the DBs toward the ceiling.","Lower slow."],tech:"Builds the lower traps and shoulder health.",prog:"Pause at the top."},
+{name:"Prone T-Raise",musc:"Mid traps · rear delts",load:"2×10 DB",sets:3,reps:"12–15",pattern:"rearfly",cues:["Face-down, arms straight out to a T.","Raise to squeeze the blades.","Lower under control."],tech:"Targets the mid-back and rear delts.",prog:"Add a hold."},
+{name:"DB Face-Pull",musc:"Rear delts · upper back",load:"2×10 DB",sets:3,reps:"15",pattern:"rearfly",cues:["Hinge, pull the DBs toward the forehead.","Elbows high and wide.","Squeeze, lower slow."],tech:"Great for shoulder health and posture.",prog:"Pause 1 sec at the top."},
+{name:"Rear-Delt Row",musc:"Rear delts · upper back",load:"2×10 DB",sets:3,reps:"12–15",pattern:"rearfly",cues:["Hinge, row with elbows flared wide.","Pull toward the upper chest.","Squeeze the rear delts."],tech:"A row angled to hammer the rear delts.",prog:"Hold the top."},
+{name:"Reverse Fly + Hold",musc:"Rear delts",load:"2×10 DB",sets:3,reps:"12–15",pattern:"rearfly",cues:["Hinge, fly the arms wide.","Hold 1 sec at the top.","Lower for 3 sec."],tech:"Holds plus slow negatives grow stubborn rear delts.",prog:"Add reps."},
+{name:"Wide Row to Neck",musc:"Rear delts · traps",load:"2×10 DB",sets:3,reps:"15",pattern:"rearfly",cues:["Hinge, pull the DBs up toward the neck.","Elbows lead, high and wide.","Control the descent."],tech:"Combines a high row and rear-fly feel.",prog:"Slow the lower."}
+],
+posterior:[
+{name:"KB Swing",musc:"Glutes · hamstrings · back",load:"25 KB",sets:4,reps:"15–25",pattern:"swing",cues:["Hinge hard, hike the bell back.","SNAP the hips — power is the glutes.","Float to chest height, repeat."],tech:"Posterior-chain power and conditioning.",prog:"Shorten rest to 30 sec."},
+{name:"Single-Arm KB Swing",musc:"Glutes · hamstrings · back",load:"25 KB",sets:3,reps:"12–15 / side",pattern:"swing",cues:["Swing with one hand, square hips.","Snap the hips, don't lift with the arm.","Switch hands each set."],tech:"Adds an anti-rotation core demand.",prog:"Alternate hands mid-set."},
+{name:"Dead-Stop Swing",musc:"Glutes · hamstrings",load:"25 KB",sets:4,reps:"12–15",pattern:"swing",cues:["Start each rep from a dead stop.","Hike and snap to chest height.","Park it, reset, repeat."],tech:"Resetting each rep builds explosive power.",prog:"Add reps."},
+{name:"KB Clean",musc:"Glutes · back · shoulders",load:"25 KB",sets:3,reps:"8–10 / side",pattern:"swing",cues:["Hike the bell, guide it to the rack.","Catch soft on the wrist, no banging.","Lower to a swing, repeat."],tech:"A full-body power move — keep it crisp.",prog:"Flow into a press (clean & press)."},
+{name:"KB Sumo Deadlift",musc:"Glutes · hamstrings",load:"25 KB",sets:3,reps:"15–20",pattern:"hinge",cues:["Wide stance, bell between the feet.","Hinge, flat back, grab the handle.","Stand tall, squeeze the glutes."],tech:"Loads the hips without the swing's impact.",prog:"Pause just off the floor."},
+{name:"Glute Bridge",musc:"Glutes · hamstrings",load:"25 KB",sets:3,reps:"15–20",pattern:"hinge",cues:["On your back, bell across the hips.","Drive the hips up high.","Squeeze 1 sec, lower slow."],tech:"Direct glute work, easy on the back.",prog:"Move to single-leg."},
+{name:"KB Good Morning",musc:"Hamstrings · glutes · back",load:"25 KB",sets:3,reps:"12–15",pattern:"hinge",cues:["Bell hugged to the chest.","Hinge forward, flat back.","Drive the hips through to stand."],tech:"Strengthens the whole hinge pattern.",prog:"Slow the lower."},
+{name:"Romanian Deadlift",musc:"Hamstrings · glutes",load:"25 KB",sets:3,reps:"12–20",pattern:"hinge",cues:["Bell in both hands, soft knees.","Hips back, bell skims the legs.","Snap forward to stand."],tech:"The strength base behind a powerful swing.",prog:"Add a 3-sec lower."}
+],
+core:[
+{name:"Plank",musc:"Core",load:"Bodyweight",sets:2,reps:"30–60 sec",pattern:"plank",cues:["Forearms down, body in a line.","Squeeze glutes and brace the abs.","No sagging or piking."],tech:"Brace as if about to take a punch.",prog:"Add 10 sec each week."},
+{name:"Renegade Row",musc:"Core · back",load:"2×10 DB",sets:2,reps:"8–10 / side",pattern:"renegade",cues:["Plank on the DBs, feet wide.","Row one DB without twisting the hips.","Stay flat and steady, alternate."],tech:"Anti-rotation core plus back work.",prog:"Narrow the feet."},
+{name:"Side Plank",musc:"Obliques · core",load:"Bodyweight",sets:2,reps:"20–40 sec / side",pattern:"plank",cues:["On one forearm, body in a line.","Stack the hips and lift them high.","Hold tight, breathe, switch."],tech:"Builds the obliques and a stable spine.",prog:"Reach the top arm under and through."},
+{name:"Plank Shoulder Taps",musc:"Core · shoulders",load:"Bodyweight",sets:2,reps:"20 taps",pattern:"plank",cues:["High plank, feet wide.","Tap the opposite shoulder.","Keep the hips dead still."],tech:"Anti-rotation — the slower the harder.",prog:"Narrow the feet."},
+{name:"Long-Lever Plank",musc:"Core",load:"Bodyweight",sets:2,reps:"20–30 sec",pattern:"plank",cues:["Forearms further forward than normal.","Brace the abs hard.","Flat line, don't sag."],tech:"Extending the lever doubles the difficulty.",prog:"Reach a touch further out."},
+{name:"Hollow-Body Hold",musc:"Core",load:"Bodyweight",sets:2,reps:"20–40 sec",pattern:"plank",cues:["On your back, arms overhead.","Press the low back into the floor.","Lift shoulders and legs, hold."],tech:"The gymnast's core builder.",prog:"Straighten the legs for leverage."},
+{name:"Renegade Row + Push-Up",musc:"Core · chest · back",load:"2×10 DB",sets:2,reps:"6–8 / side",pattern:"renegade",cues:["Push-up on the DBs, then row each side.","Hips locked, no rotation.","Slow and controlled."],tech:"Full-body anti-rotation challenge.",prog:"Add a rep each week."},
+{name:"DB Suitcase March",musc:"Core · obliques",load:"1×10 DB",sets:2,reps:"30–40 sec",pattern:"plank",cues:["Hold one DB at your side, stand tall.","March in place, don't lean.","Resist tipping toward the weight."],tech:"Anti-lateral-flexion core strength.",prog:"Hold longer, then switch hands."}
+]
+};
+function pickReplacement(ex){
+  const cat=EX_CAT[ex.id]; const bank=BANK[cat]||[];
+  if(!bank.length) return null;
+  const inDay=dayEx(entry.workout).map(e=>(e.name||"").toLowerCase());
+  const cur=(ex.name||"").toLowerCase();
+  let pool=bank.filter(b=>b.name.toLowerCase()!==cur && inDay.indexOf(b.name.toLowerCase())<0);
+  if(!pool.length) pool=bank.filter(b=>b.name.toLowerCase()!==cur);
+  if(!pool.length) pool=bank;
+  return pool[Math.floor(Math.random()*pool.length)];
+}
+function replaceExercise(ex){
+  const nx=pickReplacement(ex); if(!nx)return;
+  PROFILE.overrides[ex.id]=Object.assign({replaced:true},nx);
+  saveProfile(); renderToday();
 }
 function resetExercise(id){delete PROFILE.overrides[id];saveProfile();renderToday();}
 
