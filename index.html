@@ -196,6 +196,31 @@
   .figbox .figsvg{width:100%;height:auto;display:block}
   .figcap{margin-top:6px;font-size:14px;font-weight:700;color:var(--ember);letter-spacing:.06em;text-transform:uppercase}
   .cell.future{opacity:.28}
+  .exbtns{display:flex;gap:8px;margin-top:12px}
+  .ex-replace,.ex-reset{flex:1;background:var(--panel-2);border:1px solid var(--line);color:var(--ink);font-family:inherit;font-weight:700;font-size:14px;padding:10px;border-radius:10px;cursor:pointer}
+  .ex-replace{border-color:rgba(255,106,61,.45);color:var(--ember)}
+  .ex-replace:disabled{opacity:.6}
+  .crewrow{display:flex;align-items:center;gap:12px;padding:13px 4px;border-bottom:1px solid var(--line)}
+  .crewrow:last-child{border-bottom:none}
+  .crewrow.me{background:rgba(255,106,61,.06);border-radius:10px;padding:13px 10px}
+  .crewrank{font-family:'Anton';font-size:26px;width:38px;text-align:center;color:var(--gold)}
+  .crewname{flex:1;font-weight:700;font-size:16px;line-height:1.25}
+  .crewstat{font-size:12px;color:var(--muted);text-align:right;line-height:1.3}
+  .crewstat b{color:var(--ember);font-family:'Anton';font-size:20px}
+  .composer{display:flex;flex-direction:column;gap:9px;margin-top:10px}
+  .seg{display:flex;gap:6px}
+  .seg button{flex:1;background:var(--panel-2);border:1px solid var(--line);color:var(--muted);font-family:inherit;font-weight:700;font-size:14px;padding:10px;border-radius:10px;cursor:pointer}
+  .seg button.on{border-color:var(--ember);color:var(--ember);background:rgba(255,106,61,.08)}
+  .composer select,.composer textarea{background:var(--panel-2);border:1px solid var(--line);color:var(--ink);font-family:inherit;font-size:15px;padding:11px;border-radius:10px;outline:none;width:100%;resize:vertical}
+  .msg{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-top:9px;background:var(--panel-2)}
+  .msg.taunt{border-left:3px solid var(--ember)}
+  .msg.sup{border-left:3px solid var(--good)}
+  .msgmeta{font-size:12px;color:var(--muted);margin-bottom:3px}
+  .msgmeta b{color:var(--ink)}
+  .msgbody{font-size:15px}
+  .profrow{display:flex;gap:10px;margin-top:10px}
+  .profrow label{flex:1;font-size:12px;color:var(--muted);font-weight:700;display:flex;flex-direction:column;gap:5px}
+  .profrow input{background:var(--panel-2);border:1px solid var(--line);color:var(--ink);font-family:inherit;font-size:18px;padding:10px;border-radius:10px;outline:none}
 </style>
 </head>
 <body>
@@ -219,7 +244,7 @@
       <span class="kic">After-Dark Strength</span>
       <h1>NIGHT<span>LIFT</span></h1>
     </div>
-    <div class="who">Aaron · 47 · 5&#39;11&#34; · 190<br><b id="todayDate">—</b>
+    <div class="who"><span id="whoLine">—</span><br><b id="todayDate">—</b>
       <span class="sync" id="syncChip"><span class="dot"></span><span id="syncTxt">local</span></span>
     </div>
   </header>
@@ -321,29 +346,63 @@
     </div>
     <p class="micro">Educational tool, not medical advice. Build form before intensity; stop on any sharp or joint pain.</p>
   </section>
+
+  <!-- ===================== CREW ===================== -->
+  <section id="view-crew" class="hide">
+    <div class="card">
+      <span class="eyebrow">This week · the standings</span>
+      <div id="crewBoard"></div>
+      <p class="note" style="margin-top:10px">👑 = most sessions this week. 🪣 = last place takes the <b>Tub-o-Shit</b>. Resets every Sunday — log sessions to climb (ties broken by total reps).</p>
+    </div>
+    <div class="card">
+      <span class="eyebrow">Talk trash · send love</span>
+      <div class="composer">
+        <div class="seg" id="kindSeg"><button data-kind="taunt" class="on" type="button">🔥 Taunt</button><button data-kind="support" type="button">💪 Support</button></div>
+        <select id="msgTo"></select>
+        <textarea id="msgBody" rows="2" placeholder="Say something…" maxlength="280"></textarea>
+        <button id="msgSend" class="finish" type="button" style="font-size:18px">SEND</button>
+      </div>
+      <div id="wall"></div>
+    </div>
+    <div class="card tight">
+      <span class="eyebrow">Your profile</span>
+      <div class="profrow">
+        <label>Height <input id="pfH" type="text" placeholder="5'11&quot;"></label>
+        <label>Weight (lb) <input id="pfW" type="text" inputmode="decimal" placeholder="190"></label>
+      </div>
+      <button id="pfSave" type="button" class="finish" style="font-size:18px;margin-top:12px">SAVE PROFILE</button>
+      <p class="note" style="margin-top:10px">Used for your stats and to tailor AI exercise swaps. <button id="logoutBtn" type="button" style="background:none;border:1px solid var(--line);color:var(--ember);font-family:inherit;font-weight:700;padding:5px 11px;border-radius:8px;font-size:13px;margin-left:6px">Switch user</button></p>
+    </div>
+  </section>
 </div>
 
 <nav class="tabs hide" id="tabs">
   <button data-view="today" class="on"><span class="ico">🔥</span>Tonight</button>
   <button data-view="progress"><span class="ico">📈</span>Progress</button>
+  <button data-view="crew"><span class="ico">👥</span>Crew</button>
   <button data-view="guide"><span class="ico">📖</span>Guide</button>
 </nav>
 <div class="toast" id="toast">Logged. Nice work. 💪</div>
 
 <script>
 /* ===================== CONFIG ===================== */
-const GATE_CODE   = "7880";
+const USERS={ "7880":{id:"aaron",name:"Aaron"}, "1221":{id:"sean",name:"Sean"}, "7886":{id:"abe",name:"Abe"} };
 const SB_URL      = "https://xcgdnzypisbzxhaooswb.supabase.co";
 const SB_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhjZ2RuenlwaXNienhoYW9vc3diIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0OTg3MjYsImV4cCI6MjA5MDA3NDcyNn0._-3ZW05XMM50hvX4Vk2ltt6VWKITUcD0c3fWtuNiJ4Y";
 const TABLE       = "nightlift_log";
+const T_PROFILE   = "nightlift_profile";
+const T_WALL      = "nightlift_wall";
+const PATTERN_POSE={squat:"d2",hinge:"a2",lunge:"a3",splitsquat:"a1",press:"b2",overhead:"b3",row:"c1",curl:"c3",raise:"b4",rearfly:"c4",swing:"d1",pushup:"b1",plank:"d5",calf:"a4",renegade:"d4"};
+let ME=null, PROFILE={name:"",height:"",weight:"",overrides:{}};
+const USERS_BYID=Object.keys(USERS).reduce((o,c)=>{o[USERS[c].id]=USERS[c].name;return o;},{});
 
 /* ===================== local cache ===================== */
 const store=(()=>{let ok=true;try{const k="__t";localStorage.setItem(k,"1");localStorage.removeItem(k);}catch(e){ok=false;}let mem={};
   return{get:k=>{try{return ok?localStorage.getItem(k):(mem[k]??null);}catch(e){return mem[k]??null;}},set:(k,v)=>{try{ok?localStorage.setItem(k,v):(mem[k]=v);}catch(e){mem[k]=v;}}};})();
-const KEY="nightlift_v2";
-function loadLocal(){try{return JSON.parse(store.get(KEY))||{}}catch(e){return{}}}
-function saveLocal(){store.set(KEY,JSON.stringify(DB));}
-let DB=loadLocal();
+function dataKey(){return "nightlift_v2_"+(ME?ME.id:"anon");}
+function loadLocal(){try{return JSON.parse(store.get(dataKey()))||{}}catch(e){return{}}}
+function saveLocal(){store.set(dataKey(),JSON.stringify(DB));}
+let DB={};
 
 /* ===================== cloud sync ===================== */
 let sb=null, cloud=false;
@@ -372,7 +431,7 @@ async function pullCloud(){
   if(!cloud) { setSync("local"); return; }
   setSync("sync");
   try{
-    const {data,error}=await sb.from(TABLE).select("log_date,payload");
+    const {data,error}=await sb.from(TABLE).select("log_date,payload").eq("user_id",ME.id);
     if(error) throw error;
     const remote={}; (data||[]).forEach(r=>remote[r.log_date]=r.payload);
     const localOnly=Object.keys(DB).filter(d=>!(d in remote));
@@ -389,7 +448,7 @@ async function pushDate(d,immediate){
   const go=async()=>{
     setSync("sync");
     try{
-      const {error}=await sb.from(TABLE).upsert({log_date:d,payload:DB[d],updated_at:new Date().toISOString()},{onConflict:"log_date"});
+      const {error}=await sb.from(TABLE).upsert({user_id:ME.id,log_date:d,payload:DB[d],updated_at:new Date().toISOString()},{onConflict:"user_id,log_date"});
       if(error) throw error; setSync("ok");
     }catch(e){ console.warn("push failed",e); setSync("off"); }
   };
@@ -397,6 +456,22 @@ async function pushDate(d,immediate){
   clearTimeout(pushTimers[d]); pushTimers[d]=setTimeout(go,500); // debounce typing
 }
 function persist(d){ pushDate(d); }
+
+/* ---- per-user profile (height / weight / exercise swaps) ---- */
+async function loadProfile(){
+  PROFILE={name:ME.name,height:"",weight:"",overrides:{}};
+  if(!cloud) return;
+  try{
+    const {data,error}=await sb.from(T_PROFILE).select("name,height,weight,overrides").eq("user_id",ME.id).maybeSingle();
+    if(error) throw error;
+    if(data){ PROFILE={name:data.name||ME.name,height:data.height||"",weight:data.weight||"",overrides:data.overrides||{}}; }
+  }catch(e){ console.warn("profile load",e); }
+}
+async function saveProfile(){
+  if(!cloud) return;
+  try{ await sb.from(T_PROFILE).upsert({user_id:ME.id,name:PROFILE.name,height:PROFILE.height,weight:PROFILE.weight,overrides:PROFILE.overrides,updated_at:new Date().toISOString()},{onConflict:"user_id"}); }
+  catch(e){ console.warn("profile save",e); }
+}
 
 /* ===================== PROGRAM (expert revision) ===================== */
 const PROGRAM={
@@ -517,6 +592,27 @@ const POSES={
 function figFrames(id){if(!POSES[id])return'';return'<div class="figwrap"><div class="figbox" data-fig="'+id+'">'+fig(POSES[id][0][1])+'</div><div class="figcap" data-cap="'+id+'">'+POSES[id][0][0]+'</div></div>';}
 function repTarget(r){r=(r||"").toLowerCase();if(r.indexOf("failure")>=0)return"MAX";return r.replace(/\/.*$/,"").replace("sec","").trim();}
 
+/* ===================== per-user program (with AI swaps) ===================== */
+function dayEx(workout){return PROGRAM[workout].ex.map(ex=>{const o=PROFILE.overrides&&PROFILE.overrides[ex.id];return o?Object.assign({},ex,o,{id:ex.id}):ex;});}
+function poseId(ex){return ex.pattern?(PATTERN_POSE[ex.pattern]||""):ex.id;}
+function esc(s){return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+async function replaceExercise(ex,btn){
+  const others=dayEx(entry.workout).filter(e=>e.id!==ex.id).map(e=>e.name);
+  const ctx={user:{name:PROFILE.name,height:PROFILE.height,weight:PROFILE.weight},day:PROGRAM[entry.workout].name,replacing:{name:ex.name,muscle:ex.musc},avoid:others,equipment:"one 25 lb kettlebell, two 10 lb dumbbells, and bodyweight only"};
+  if(btn){btn.disabled=true;btn.textContent="Thinking…";}
+  try{
+    const r=await fetch("/api/replace",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(ctx)});
+    const data=await r.json();
+    if(!r.ok||data.error) throw new Error(data.error||("HTTP "+r.status));
+    const nx={name:String(data.name||"New Exercise"),musc:String(data.musc||ex.musc),load:String(data.load||ex.load),sets:Math.max(1,Math.min(5,parseInt(data.sets)||ex.sets)),reps:String(data.reps||ex.reps),cues:Array.isArray(data.cues)?data.cues.slice(0,4).map(String):ex.cues,tech:String(data.tech||""),prog:String(data.prog||""),pattern:String(data.pattern||""),amrap:!!data.amrap,replaced:true};
+    PROFILE.overrides[ex.id]=nx; saveProfile(); renderToday();
+  }catch(e){
+    if(btn){btn.disabled=false;btn.textContent="↻ Replace";}
+    alert("Couldn't fetch a replacement: "+e.message+"\n\nThe AI swap needs ANTHROPIC_API_KEY set in Vercel (see README). Everything else works without it.");
+  }
+}
+function resetExercise(id){delete PROFILE.overrides[id];saveProfile();renderToday();}
+
 /* ---- slow looping animation between the pose frames ---- */
 let animFigs=[],animOn=false,lastDraw=0;
 function initFigs(){
@@ -550,14 +646,14 @@ let currentDate=today(), entry=ensure(currentDate);
 if(!entry.workout) entry.workout=autoWorkout();
 
 /* ===================== TODAY ===================== */
-function progressPct(){const w=PROGRAM[entry.workout];let done=0;w.ex.forEach(ex=>{const s=entry.sets[ex.id];if(s&&s.some(v=>+v>0))done++;});return w.ex.length?Math.round(done/w.ex.length*100):0;}
+function progressPct(){const exs=dayEx(entry.workout);let done=0;exs.forEach(ex=>{const s=entry.sets[ex.id];if(s&&s.some(v=>+v>0))done++;});return exs.length?Math.round(done/exs.length*100):0;}
 function renderRing(){const p=progressPct();document.getElementById("ringProg").style.strokeDashoffset=201-(201*p/100);document.getElementById("ringPct").textContent=p+"%";}
 function renderDaySwitch(){const c=document.getElementById("daySwitch");c.innerHTML="";ORDER.forEach(k=>{const b=document.createElement("button");b.textContent="Day "+k;if(k===entry.workout)b.className="on";b.onclick=()=>{entry.workout=k;persist(currentDate);renderToday();};c.appendChild(b);});}
 function renderExList(){
-  const w=PROGRAM[entry.workout];
-  document.getElementById("focusTitle").innerHTML='<small>'+w.tag+' · '+w.ex.length+' moves</small>'+w.name;
+  const tpl=PROGRAM[entry.workout]; const exs=dayEx(entry.workout);
+  document.getElementById("focusTitle").innerHTML='<small>'+tpl.tag+' · '+exs.length+' moves</small>'+tpl.name;
   const list=document.getElementById("exList");list.innerHTML="";
-  w.ex.forEach(ex=>{
+  exs.forEach(ex=>{
     const saved=entry.sets[ex.id]||Array(ex.sets).fill("");
     const isDone=saved.some(v=>+v>0);
     const el=document.createElement("div");el.className="ex"+(isDone?" done":"");
@@ -569,16 +665,17 @@ function renderExList(){
     el.innerHTML=
       '<div class="ex-head">'+
         '<div class="ex-check">✓</div>'+
-        '<div class="ex-name"><div class="t">'+ex.name+(ex.star?'<span class="star">★ KEY</span>':'')+'</div><div class="m">'+ex.musc+' · '+ex.sets+' × '+ex.reps+'</div></div>'+
-        '<div class="ex-load">'+ex.load.replace(/ /g,'&nbsp;')+'<small>LOAD</small></div>'+
+        '<div class="ex-name"><div class="t">'+esc(ex.name)+(ex.star?'<span class="star">★ KEY</span>':'')+(ex.replaced?'<span class="star" style="color:var(--good)">⟳ SWAP</span>':'')+'</div><div class="m">'+esc(ex.musc)+' · '+ex.sets+' × '+esc(ex.reps)+'</div></div>'+
+        '<div class="ex-load">'+esc(ex.load).replace(/ /g,'&nbsp;')+'<small>LOAD</small></div>'+
         '<div class="chev">▶</div>'+
       '</div>'+
       '<div class="ex-body"><div class="ex-inner">'+
-        figFrames(ex.id)+
-        ex.cues.map(c=>'<div class="cue">'+c+'</div>').join('')+
-        '<div class="tech"><b>Coach:</b> '+ex.tech+'</div>'+
-        '<div class="prog"><b>Level up:</b> '+ex.prog+'</div>'+
+        figFrames(poseId(ex))+
+        ex.cues.map(c=>'<div class="cue">'+esc(c)+'</div>').join('')+
+        (ex.tech?'<div class="tech"><b>Coach:</b> '+esc(ex.tech)+'</div>':'')+
+        (ex.prog?'<div class="prog"><b>Level up:</b> '+esc(ex.prog)+'</div>':'')+
         '<div class="setrow">'+sets+'<span class="lg">grey = target · tap to log actual</span></div>'+
+        '<div class="exbtns"><button class="ex-replace" type="button">↻ Replace</button>'+(ex.replaced?'<button class="ex-reset" type="button">Undo swap</button>':'')+'</div>'+
       '</div></div>';
     el.querySelector(".ex-head").onclick=e=>{if(e.target.closest(".ex-check"))return;el.classList.toggle("open");};
     el.querySelector(".ex-check").onclick=e=>{e.stopPropagation();
@@ -587,12 +684,14 @@ function renderExList(){
       else{const m=parseInt(ex.reps)||10;entry.sets[ex.id]=Array(ex.sets).fill(m);}
       persist(currentDate);renderToday();
     };
+    const rb=el.querySelector(".ex-replace"); if(rb) rb.onclick=ev=>{ev.stopPropagation();replaceExercise(ex,rb);};
+    const rs=el.querySelector(".ex-reset"); if(rs) rs.onclick=ev=>{ev.stopPropagation();resetExercise(ex.id);};
     list.appendChild(el);
   });
   list.querySelectorAll("input[data-ex]").forEach(inp=>{
     inp.addEventListener("input",()=>{
       const id=inp.dataset.ex,s=+inp.dataset.set;
-      const n=PROGRAM[entry.workout].ex.find(e=>e.id===id).sets;
+      const f=exs.find(e=>e.id===id); const n=f?f.sets:3;
       if(!entry.sets[id])entry.sets[id]=Array(n).fill("");
       entry.sets[id][s]=inp.value;
       persist(currentDate);renderRing();updateStreakLine();refreshChecks();
@@ -600,10 +699,10 @@ function renderExList(){
   });
   initFigs();
 }
-function refreshChecks(){document.querySelectorAll("#exList .ex").forEach((el,i)=>{const ex=PROGRAM[entry.workout].ex[i];const s=entry.sets[ex.id];el.classList.toggle("done",!!(s&&s.some(v=>+v>0)));});}
+function refreshChecks(){const exs=dayEx(entry.workout);document.querySelectorAll("#exList .ex").forEach((el,i)=>{const ex=exs[i];if(!ex)return;const s=entry.sets[ex.id];el.classList.toggle("done",!!(s&&s.some(v=>+v>0)));});}
 function renderCreatine(){document.getElementById("creatineToggle").classList.toggle("on",entry.creatine);}
 function renderFinish(){const b=document.getElementById("finishBtn");b.classList.toggle("done",entry.done);b.textContent=entry.done?"✓ SESSION LOGGED":"LOG TONIGHT'S WORK";}
-function renderToday(){document.getElementById("todayDate").textContent=fmtNice(currentDate);renderDaySwitch();renderExList();renderRing();renderCreatine();renderFinish();updateStreakLine();}
+function renderToday(){const wl=document.getElementById("whoLine");if(wl)wl.textContent=(PROFILE.name||(ME?ME.name:""))+(PROFILE.height?" · "+PROFILE.height:"")+(PROFILE.weight?" · "+PROFILE.weight:"");document.getElementById("todayDate").textContent=fmtNice(currentDate);renderDaySwitch();renderExList();renderRing();renderCreatine();renderFinish();updateStreakLine();}
 
 function computeStreak(){let s=0,d=new Date();for(;;){const k=d.toISOString().slice(0,10);if(DB[k]&&DB[k].done){s++;d.setDate(d.getDate()-1);}else break;}return s;}
 function updateStreakLine(){const s=computeStreak();const el=document.getElementById("streakLine");el.textContent=entry.done?("🔥 "+s+"-day streak — locked in. See you tomorrow."):(s>0?("🔥 "+s+"-day streak going. Log tonight to keep it alive."):"Log a session to start your streak.");}
@@ -642,6 +741,53 @@ function renderProgress(){
   document.getElementById("volNote").innerHTML=vols.length?("Total reps across these sessions: <b style='color:var(--ember)'>"+tr+"</b>. Rising bars = progressive overload working."):"";
 }
 
+/* ===================== CREW (group status + wall + weekly crown/tub) ===================== */
+function weekRange(){const tStr=today();const s=new Date(tStr+"T00:00:00Z");s.setUTCDate(s.getUTCDate()-s.getUTCDay());const e=new Date(s);e.setUTCDate(s.getUTCDate()+6);return [s.toISOString().slice(0,10),e.toISOString().slice(0,10)];}
+async function renderCrew(){
+  const board=document.getElementById("crewBoard");
+  const sel=document.getElementById("msgTo");
+  if(sel && !sel.dataset.filled){sel.innerHTML='<option value="all">Everyone</option>'+Object.keys(USERS).map(c=>USERS[c]).filter(u=>!ME||u.id!==ME.id).map(u=>'<option value="'+u.id+'">'+u.name+'</option>').join('');sel.dataset.filled="1";}
+  const pfH=document.getElementById("pfH"),pfW=document.getElementById("pfW");
+  if(pfH&&!pfH.value)pfH.value=PROFILE.height||"";
+  if(pfW&&!pfW.value)pfW.value=PROFILE.weight||"";
+  if(!cloud){board.innerHTML='<p class="note">Crew stats need a connection.</p>';return;}
+  board.innerHTML='<p class="note">Loading…</p>';
+  try{
+    const [ws,we]=weekRange();
+    const {data:logs}=await sb.from(TABLE).select("user_id,payload").gte("log_date",ws).lte("log_date",we);
+    const {data:profs}=await sb.from(T_PROFILE).select("user_id,name");
+    const nameOf={}; (profs||[]).forEach(p=>{if(p.name)nameOf[p.user_id]=p.name;});
+    const stat={}; Object.keys(USERS).forEach(c=>{const u=USERS[c];stat[u.id]={id:u.id,name:nameOf[u.id]||u.name,sessions:0,reps:0};});
+    (logs||[]).forEach(r=>{const u=stat[r.user_id]; if(!u)return; const p=r.payload||{}; if(p.done)u.sessions++; Object.values(p.sets||{}).forEach(a=>a.forEach(v=>u.reps+=(+v||0)));});
+    const rows=Object.keys(stat).map(k=>stat[k]).sort((a,b)=>b.sessions-a.sessions||b.reps-a.reps);
+    const active=rows.some(r=>r.sessions>0||r.reps>0);
+    board.innerHTML=rows.map((r,i)=>{
+      const lead=active&&i===0;
+      const tub=active&&i===rows.length-1&&rows.length>1&&(r.sessions<rows[0].sessions||r.reps<rows[0].reps);
+      return '<div class="crewrow'+(ME&&r.id===ME.id?' me':'')+'"><div class="crewrank">'+(lead?'👑':tub?'🪣':(i+1))+'</div><div class="crewname">'+esc(r.name)+(ME&&r.id===ME.id?' (you)':'')+(tub?'<br><span style="color:var(--ember);font-size:12px">Tub-o-Shit 💩</span>':'')+'</div><div class="crewstat"><b>'+r.sessions+'</b> sess<br>'+r.reps+' reps</div></div>';
+    }).join('');
+    await renderWall();
+  }catch(e){console.warn(e);board.innerHTML='<p class="note">Couldn\u2019t load crew stats.</p>';}
+}
+async function renderWall(){
+  const wall=document.getElementById("wall"); if(!wall||!cloud)return;
+  try{
+    const {data}=await sb.from(T_WALL).select("from_name,from_id,to_id,kind,body,created_at").order("created_at",{ascending:false}).limit(20);
+    wall.innerHTML=(data||[]).map(m=>{
+      const to=(!m.to_id||m.to_id==="all")?"all":(USERS_BYID[m.to_id]||m.to_id);
+      return '<div class="msg '+(m.kind==="support"?"sup":"taunt")+'"><div class="msgmeta">'+(m.kind==="support"?"💪":"🔥")+' <b>'+esc(m.from_name||m.from_id)+'</b> → '+esc(to)+'</div><div class="msgbody">'+esc(m.body)+'</div></div>';
+    }).join('')||'<p class="note">No messages yet. Start something.</p>';
+  }catch(e){console.warn(e);}
+}
+async function sendMsg(){
+  const ta=document.getElementById("msgBody"); const body=(ta.value||"").trim(); if(!body)return;
+  const kind=(document.querySelector("#kindSeg button.on")||{}).getAttribute?document.querySelector("#kindSeg button.on").getAttribute("data-kind"):"taunt";
+  const to=document.getElementById("msgTo").value;
+  if(!cloud){alert("Need a connection to send.");return;}
+  try{ await sb.from(T_WALL).insert({from_id:ME.id,from_name:PROFILE.name||ME.name,to_id:to,kind:kind,body:body.slice(0,280)}); ta.value=""; renderWall(); }
+  catch(e){alert("Couldn't send: "+e.message);}
+}
+
 /* ===================== GUIDE library ===================== */
 function renderLibrary(){const lib=document.getElementById("libList");lib.innerHTML="";ORDER.forEach(k=>{const w=PROGRAM[k];const d=document.createElement("div");d.className="lib-day";d.innerHTML='<h3><i>Day '+k+'</i> '+w.name+'</h3>'+w.ex.map(ex=>'<p class="note" style="margin-top:4px">• <b>'+ex.name+'</b>'+(ex.star?' ★':'')+' — '+ex.sets+'×'+ex.reps+' <span style="color:var(--gold)">('+ex.load+')</span></p>').join('');lib.appendChild(d);});}
 
@@ -649,25 +795,37 @@ function renderLibrary(){const lib=document.getElementById("libList");lib.innerH
 document.getElementById("resetBtn").onclick=async()=>{
   if(!confirm("Clear ALL logged sessions everywhere (cloud + this device)?"))return;
   DB={};saveLocal();
-  if(cloud){try{await sb.from(TABLE).delete().neq("log_date","1900-01-01");}catch(e){console.warn(e);}}
+  if(cloud){try{await sb.from(TABLE).delete().eq("user_id",ME.id);}catch(e){console.warn(e);}}
   currentDate=today();entry=ensure(currentDate);entry.workout=autoWorkout();renderToday();renderProgress();
 };
 
 /* ===================== tabs ===================== */
-document.querySelectorAll("nav.tabs button").forEach(btn=>{btn.onclick=()=>{document.querySelectorAll("nav.tabs button").forEach(b=>b.classList.remove("on"));btn.classList.add("on");const v=btn.dataset.view;["today","progress","guide"].forEach(id=>document.getElementById("view-"+id).classList.toggle("hide",id!==v));if(v==="progress")renderProgress();window.scrollTo({top:0,behavior:"smooth"});};});
+document.querySelectorAll("nav.tabs button").forEach(btn=>{btn.onclick=()=>{document.querySelectorAll("nav.tabs button").forEach(b=>b.classList.remove("on"));btn.classList.add("on");const v=btn.dataset.view;["today","progress","guide","crew"].forEach(id=>document.getElementById("view-"+id).classList.toggle("hide",id!==v));if(v==="progress")renderProgress();if(v==="crew")renderCrew();window.scrollTo({top:0,behavior:"smooth"});};});
+
+/* crew controls */
+document.querySelectorAll("#kindSeg button").forEach(b=>b.onclick=()=>{document.querySelectorAll("#kindSeg button").forEach(x=>x.classList.remove("on"));b.classList.add("on");});
+document.getElementById("msgSend").onclick=sendMsg;
+document.getElementById("pfSave").onclick=()=>{PROFILE.height=document.getElementById("pfH").value.trim();PROFILE.weight=document.getElementById("pfW").value.trim();saveProfile();renderToday();const b=document.getElementById("pfSave");b.textContent="SAVED ✓";setTimeout(()=>b.textContent="SAVE PROFILE",1200);};
+document.getElementById("logoutBtn").onclick=()=>{store.set("nightlift_code","");try{location.reload();}catch(e){}};
 
 /* ===================== gate + boot ===================== */
-function openApp(){
+async function openApp(){
   const g=document.getElementById("gate"); g.classList.add("hide"); g.style.display="none";
   const aw=document.getElementById("appWrap"); aw.classList.remove("hide"); aw.style.display="block";
   const tb=document.getElementById("tabs"); tb.classList.remove("hide"); tb.style.display="flex";
+  DB=loadLocal(); currentDate=today(); entry=ensure(currentDate); if(!entry.workout)entry.workout=autoWorkout();
   try{ renderToday(); renderLibrary(); }catch(e){ console.error(e); }
-  initCloud().then(()=>pullCloud()).then(()=>{ entry=ensure(currentDate); if(!entry.workout)entry.workout=autoWorkout(); renderToday(); }).catch(e=>{ console.warn(e); setSync("off"); });
+  await initCloud();
+  await loadProfile();
+  await pullCloud();
+  entry=ensure(currentDate); if(!entry.workout)entry.workout=autoWorkout();
+  try{ renderToday(); }catch(e){ console.warn(e); }
 }
 const gi=document.getElementById("gateInput"),gb=document.getElementById("gateBtn"),gh=document.querySelector("#gate .hint");
 function tryUnlock(){
   const v=(gi.value||"").replace(/\D/g,"");
-  if(v===GATE_CODE){ store.set("nightlift_ok","1"); try{ openApp(); }catch(e){ if(gh) gh.textContent="Error: "+e.message; console.error(e); } }
+  const u=USERS[v];
+  if(u){ ME=u; store.set("nightlift_code",v); try{ openApp(); }catch(e){ if(gh) gh.textContent="Error: "+e.message; console.error(e); } }
   else{ gi.classList.add("bad"); setTimeout(()=>gi.classList.remove("bad"),400); gi.value=""; }
 }
 gb.addEventListener("click",tryUnlock);
@@ -675,7 +833,8 @@ gi.addEventListener("input",()=>{ if((gi.value||"").replace(/\D/g,"").length>=4)
 gi.addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); tryUnlock(); } });
 
 try{
-  if(store.get("nightlift_ok")==="1"){ openApp(); }
+  const saved=store.get("nightlift_code");
+  if(saved && USERS[saved]){ ME=USERS[saved]; openApp(); }
   else { setTimeout(()=>{ try{ gi.focus(); }catch(e){} },200); }
 }catch(e){ if(gh) gh.textContent="Error: "+e.message; console.error(e); }
 </script>
