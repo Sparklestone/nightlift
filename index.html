@@ -229,6 +229,40 @@
   .eqseg{display:flex;gap:6px;flex:1 1 0;min-width:0}
   .eqseg button{flex:1 1 0;min-width:0;background:var(--panel-2);border:1px solid var(--line);color:var(--muted);font-family:inherit;font-weight:700;font-size:14px;padding:8px;border-radius:10px;cursor:pointer}
   .eqseg button.on{border-color:var(--ember);color:var(--ember);background:rgba(255,106,61,.08)}
+  .sessionbar{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:11px}
+  .schip{background:var(--panel-2);border:1px solid var(--line);color:var(--muted);font-family:inherit;font-weight:700;font-size:13px;padding:7px 12px;border-radius:999px;cursor:pointer}
+  .schip.on{border-color:var(--ember);color:var(--ember);background:rgba(255,106,61,.1)}
+  .schip.done{color:var(--good)}
+  .schip.on.done{border-color:var(--good)}
+  .schip.add{color:var(--ink);border-style:dashed}
+  .schip.del{color:var(--faint);border-color:transparent}
+  .rstats{display:flex;gap:10px;margin-top:6px}
+  .rstat{flex:1 1 0;min-width:0;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:12px 8px;text-align:center}
+  .rstat b{display:block;font-family:'Anton';font-size:24px;color:var(--ember);line-height:1}
+  .rstat span{display:block;font-size:11px;color:var(--muted);margin-top:5px;text-transform:uppercase;letter-spacing:.03em}
+  .rlb{margin-top:11px;font-size:13px;color:var(--muted)}
+  .rlb b{color:var(--ink)}
+  .cravegrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+  .cravetile{display:flex;flex-direction:column;align-items:center;gap:3px;background:var(--panel-2);border:1px solid var(--line);color:var(--ink);font-family:inherit;font-weight:700;font-size:12px;padding:11px 6px;border-radius:12px;cursor:pointer;text-align:center;line-height:1.15}
+  .cravetile .ce{font-size:24px}
+  .cravetile .cn{min-height:28px;display:flex;align-items:center}
+  .cravetile small{color:var(--faint);font-weight:600;font-size:10px}
+  .cravecard{margin-top:12px;border:1px solid rgba(255,106,61,.4);background:rgba(255,106,61,.05);border-radius:14px;padding:14px}
+  .craveh{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+  .ce.big{font-size:40px}
+  .cravename{font-family:'Anton';font-size:22px}
+  .cravenum{font-size:13px;color:var(--ember);font-weight:700}
+  .cravebtns{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+  .cravecancel{background:none;border:none;color:var(--muted);font-family:inherit;font-weight:700;font-size:14px;padding:6px;cursor:pointer}
+  .rrow{display:flex;justify-content:space-between;gap:10px;padding:9px 2px;border-bottom:1px solid var(--line);font-size:14px}
+  .rrow:last-child{border-bottom:none}
+  .rrow .rmeta{color:var(--muted);font-size:12px;white-space:nowrap}
+  .rrow.gave span{color:var(--faint)}
+  .surfwrap{position:relative;width:128px;height:128px;margin:4px auto 12px}
+  .surfsvg{width:128px;height:128px}
+  .surfbg{fill:none;stroke:var(--line);stroke-width:5}
+  .surffg{fill:none;stroke:var(--ember);stroke-width:5;stroke-linecap:round;stroke-dasharray:201;stroke-dashoffset:201;transition:stroke-dashoffset 1s linear}
+  .surftime{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Anton';font-size:32px;color:var(--ink)}
 </style>
 </head>
 <body>
@@ -272,6 +306,7 @@
         </div>
       </div>
       <div class="accentline"></div>
+      <div class="sessionbar" id="sessionBar"></div>
       <div class="dayswitch" id="daySwitch"></div>
     </div>
 
@@ -395,12 +430,31 @@
     </div>
     <button id="logoutBottom" type="button" class="finish" style="background:var(--panel);color:var(--ember);border:1px solid var(--line)">LOG OUT</button>
   </section>
+
+  <!-- ===================== RESIST ===================== -->
+  <section id="view-resist" class="hide">
+    <div class="card">
+      <span class="eyebrow">Willpower bank</span>
+      <div id="resistTally"></div>
+      <p class="note" style="margin-top:10px">Tap what you're craving, get a better move, and bank the skip. Numbers are rough estimates of what you didn't eat — this is about cutting mindless grazing, not skipping real meals.</p>
+    </div>
+    <div class="card">
+      <span class="eyebrow">Craving something? Tap it.</span>
+      <div id="cravingGrid" class="cravegrid"></div>
+      <div id="resistPanel"></div>
+    </div>
+    <div class="card tight">
+      <span class="eyebrow">Recent wins</span>
+      <div id="resistHistory"></div>
+    </div>
+  </section>
 </div>
 
 <nav class="tabs hide" id="tabs">
   <button data-view="today" class="on"><span class="ico">🔥</span>Tonight</button>
   <button data-view="progress"><span class="ico">📈</span>Progress</button>
   <button data-view="crew"><span class="ico">👥</span>Crew</button>
+  <button data-view="resist"><span class="ico">🛑</span>Resist</button>
   <button data-view="guide"><span class="ico">📖</span>Guide</button>
 </nav>
 <div class="toast" id="toast">Logged. Nice work. 💪</div>
@@ -515,7 +569,11 @@ const PROGRAM={
     {id:"a4",name:"Single-Leg Calf Raise",musc:"Calves",load:"25 KB or 10 DB",sets:2,reps:"15–20 / leg",amrap:true,
       cues:["Hold weight on one side, balls of foot on an edge if possible.","Rise tall, squeeze hard at the top for 1 sec.","Lower slow and full for a deep stretch."],
       tech:"Last set to failure — calves need high reps and a full stretch.",
-      prog:"Add reps to 20, then a 2-sec pause at the bottom stretch."}
+      prog:"Add reps to 20, then a 2-sec pause at the bottom stretch."},
+    {id:"a5",name:"DB Reverse Curls",musc:"Forearms · brachioradialis",load:"2×10 DB",sets:2,reps:"12–15",pattern:"curl",
+      cues:["Palms-down grip, elbows pinned to your sides.","Curl up without swinging — small, strict reps.","Lower slowly; fight it on the way down."],
+      tech:"The brachioradialis is what makes a forearm look thick. Quick finisher while the legs recover.",
+      prog:"Add a 1-sec squeeze at the top, then bump the weight."}
   ]},
   B:{name:"PUSH — CHEST & SHOULDERS",tag:"Day B",ex:[
     {id:"b1",name:"Push-Ups",star:1,musc:"Chest · triceps",load:"Bodyweight",sets:3,reps:"to failure",amrap:true,
@@ -551,7 +609,11 @@ const PROGRAM={
     {id:"c4",name:"DB Rear-Delt Fly",musc:"Rear delts · upper back",load:"2×10 DB",sets:3,reps:"15–20",
       cues:["Hinge to ~45°, slight elbow bend.","Open the arms wide like spreading wings.","Lead with the elbows, squeeze the rear delts, lower slow."],
       tech:"Posture insurance for a desk worker. Strict, no momentum.",
-      prog:"Add a 1-sec hold at the top, then add reps."}
+      prog:"Add a 1-sec hold at the top, then add reps."},
+    {id:"c5",name:"DB Wrist Curls",musc:"Forearms",load:"2×10 DB",sets:3,reps:"15–20",amrap:true,pattern:"curl",
+      cues:["Forearms resting on your thighs, palms up, wrists just past the knees.","Let the bells roll to your fingertips, then curl up and squeeze.","Then flip to palms-down and do a set of reverse curls."],
+      tech:"Forearms love high reps and frequency — do a palms-up set and a palms-down set each time.",
+      prog:"Add a 1-sec squeeze at the top, then bump the weight."}
   ]},
   D:{name:"FULL BODY & CORE",tag:"Day D",ex:[
     {id:"d1",name:"KB Swing",star:1,musc:"Glutes · hamstrings · back",load:"25 KB",sets:4,reps:"15–25",
@@ -674,7 +736,7 @@ function gearAdvice(){
   return tips;
 }
 /* ===================== exercise bank (offline AI-free swaps) ===================== */
-const EX_CAT={a1:"quads",a2:"hamstrings",a3:"quads",a4:"calves",b1:"chest",b2:"chest",b3:"shoulders",b4:"sidedelts",c1:"back",c2:"back",c3:"biceps",c4:"reardelts",d1:"posterior",d2:"quads",d3:"chest",d4:"core",d5:"core"};
+const EX_CAT={a1:"quads",a2:"hamstrings",a3:"quads",a4:"calves",a5:"forearms",b1:"chest",b2:"chest",b3:"shoulders",b4:"sidedelts",c1:"back",c2:"back",c3:"biceps",c4:"reardelts",c5:"forearms",d1:"posterior",d2:"quads",d3:"chest",d4:"core",d5:"core"};
 const BANK={
 quads:[
 {name:"Goblet Squat",musc:"Quads · glutes",load:"25 KB",sets:3,reps:"15–20",pattern:"squat",amrap:true,cues:["Bell at your chest, elbows tucked.","Sit down for 3 slow seconds, chest tall.","Drive through the heels to stand."],tech:"Last set to failure — light load means high reps build the legs.",prog:"Add a 2-sec pause at the bottom."},
@@ -762,6 +824,16 @@ biceps:[
 {name:"KB Two-Hand Curl",musc:"Biceps",load:"25 KB",sets:3,reps:"10–12",pattern:"curl",cues:["Hold the bell by the horns, both hands.","Curl up, elbows tucked.","Lower under control."],tech:"The 25 lb bell adds load past the 10s.",prog:"Add a 1-sec top squeeze."},
 {name:"Paused Curl",musc:"Biceps",load:"2×10 DB",sets:3,reps:"12–15",pattern:"curl",amrap:true,cues:["Curl to the top.","Hold and squeeze 1–2 sec.","Lower slow."],tech:"The squeeze hold maximizes the contraction.",prog:"Rest-pause the last set."}
 ],
+forearms:[
+{name:"DB Wrist Curl",musc:"Forearms (flexors)",load:"2×10 DB",sets:3,reps:"15–20",pattern:"curl",amrap:true,cues:["Forearms on your thighs, palms up, wrists past the knees.","Let the bells roll to your fingertips.","Curl up, squeeze, lower slow."],tech:"High reps — forearms are endurance muscle. Last set near failure.",prog:"Add a 1-sec top squeeze, then more weight."},
+{name:"DB Reverse Wrist Curl",musc:"Forearms (extensors)",load:"2×10 DB",sets:3,reps:"15–20",pattern:"curl",cues:["Forearms on thighs, palms DOWN.","Lower the bells, then extend the wrists up.","Small range, strict, slow."],tech:"Balances the back of the forearm — thickness and healthier elbows.",prog:"Slow the lower to 3 sec."},
+{name:"DB Reverse Curl",musc:"Forearms · brachioradialis",load:"2×10 DB",sets:3,reps:"12–15",pattern:"curl",cues:["Palms-down grip, elbows pinned.","Curl up without swinging.","Lower slow, control the descent."],tech:"Hits the muscle that makes a forearm look thick.",prog:"Add a 1-sec squeeze."},
+{name:"Zottman Curl",musc:"Forearms · biceps",load:"2×10 DB",sets:3,reps:"12",pattern:"curl",cues:["Curl up palms-up.","Rotate to palms-down at the top.","Lower slowly in the palms-down grip."],tech:"The palms-down negative torches the forearms.",prog:"Slow the negative further."},
+{name:"DB Hammer Curl",musc:"Forearms · biceps",load:"2×10 DB",sets:3,reps:"12–15",pattern:"curl",cues:["Palms face each other, neutral grip.","Curl up, elbows still.","Lower slow."],tech:"Builds the brachialis and forearm together.",prog:"Slow the negative, add a squeeze."},
+{name:"Towel-Grip DB Curl",musc:"Forearms · grip",load:"2×10 DB",sets:3,reps:"12–15",pattern:"curl",cues:["Loop a towel through the handle and grip the towel.","Curl up, crushing the towel.","Lower slow — the fat grip lights up the forearms."],tech:"Thick-grip work is a forearm-builder cheat code.",prog:"Use a thicker towel or add reps."},
+{name:"DB Farmer Hold",musc:"Grip · forearms",load:"2×10 DB",sets:3,reps:"40–60 sec",pattern:"curl",cues:["Stand tall, a DB crushed in each hand at your sides.","Shoulders back, brace the core.","Hold until the grip starts to give."],tech:"Crushing grip work thickens the whole forearm.",prog:"Add time, then walk while holding."},
+{name:"Wrist Curl Hold",musc:"Forearms",load:"2×10 DB",sets:3,reps:"30–45 sec",pattern:"curl",cues:["Curl the wrists up to the top position.","Hold there and squeeze.","Don't let the wrists drop."],tech:"An isometric finisher when reps stop being a challenge.",prog:"Add time, then load."}
+],
 reardelts:[
 {name:"DB Rear-Delt Fly",musc:"Rear delts · upper back",load:"2×10 DB",sets:3,reps:"15–20",pattern:"rearfly",cues:["Hinge to 45°, slight elbow bend.","Open the arms wide like wings.","Lead with the elbows, squeeze."],tech:"Strict, no momentum — posture insurance.",prog:"Add a 1-sec hold at the top."},
 {name:"Seated Rear-Delt Fly",musc:"Rear delts",load:"2×10 DB",sets:3,reps:"15",pattern:"rearfly",cues:["Sit, chest down toward the thighs.","Fly the DBs out and back.","Squeeze the rear delts."],tech:"Seated stabilizes you for stricter reps.",prog:"Slow the lower."},
@@ -796,7 +868,7 @@ core:[
 function pickReplacement(ex){
   const cat=EX_CAT[ex.id]; const bank=BANK[cat]||[];
   if(!bank.length) return null;
-  const inDay=dayEx(entry.workout).map(e=>(e.name||"").toLowerCase());
+  const inDay=dayEx(S.workout).map(e=>(e.name||"").toLowerCase());
   const cur=(ex.name||"").toLowerCase();
   let pool=bank.filter(b=>b.name.toLowerCase()!==cur && inDay.indexOf(b.name.toLowerCase())<0);
   if(!pool.length) pool=bank.filter(b=>b.name.toLowerCase()!==cur);
@@ -835,23 +907,48 @@ function animTick(ts){
 }
 
 /* ===================== helpers ===================== */
-const today=()=>new Date().toISOString().slice(0,10);
+function ymd(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+const DAY_CUTOFF_H=4; // a new day begins at 4am local — late-night lifts stay on the prior day
+function today(){return ymd(new Date(Date.now()-DAY_CUTOFF_H*3600*1000));}
 function fmtNice(d){return new Date(d+"T12:00:00").toLocaleDateString(undefined,{weekday:'long',month:'short',day:'numeric'});}
-function ensure(date){if(!DB[date])DB[date]={workout:null,creatine:false,sets:{},done:false};return DB[date];}
-function autoWorkout(){const ds=Object.keys(DB).filter(d=>DB[d].done&&DB[d].workout).sort();if(!ds.length)return"A";const last=DB[ds[ds.length-1]].workout;return ORDER[(ORDER.indexOf(last)+1)%4];}
-let currentDate=today(), entry=ensure(currentDate);
-if(!entry.workout) entry.workout=autoWorkout();
+function newSession(w){return {id:"s"+Date.now().toString(36)+Math.floor(Math.random()*1e3),workout:w||"A",sets:{},done:false,ts:Date.now()};}
+function normalizeEntry(e){
+  if(!e)return{creatine:false,sessions:[]};
+  if(Array.isArray(e.sessions)){e.creatine=!!e.creatine;e.sessions.forEach(s=>{if(!s.sets)s.sets={};});return e;}
+  return {creatine:!!e.creatine,sessions:[{id:"s1",workout:e.workout||"A",sets:e.sets||{},done:!!e.done,ts:e.ts||Date.now()}]};
+}
+function ensure(date){const e=normalizeEntry(DB[date]);DB[date]=e;return e;}
+function allSessions(){const out=[];Object.keys(DB).forEach(d=>{normalizeEntry(DB[d]).sessions.forEach(s=>out.push({d,s}));});out.sort((a,b)=>a.d<b.d?-1:a.d>b.d?1:((a.s.ts||0)-(b.s.ts||0)));return out;}
+function sessReps(s){let t=0;Object.values(s.sets||{}).forEach(a=>a.forEach(v=>t+=(+v||0)));return t;}
+function sessLogged(s){return !!(s.done||Object.values(s.sets||{}).some(a=>a&&a.some(v=>+v>0)));}
+function autoWorkout(){const dn=allSessions().filter(x=>x.s.done&&x.s.workout);if(!dn.length)return"A";const last=dn[dn.length-1].s.workout;return ORDER[(ORDER.indexOf(last)+1)%4];}
+let currentDate=today(), entry=ensure(currentDate), curSess=0, S=null;
+if(!entry.sessions.length) entry.sessions.push(newSession(autoWorkout()));
+function setActive(i){curSess=Math.max(0,Math.min(entry.sessions.length-1,i));S=entry.sessions[curSess];}
+function openDay(){currentDate=today();entry=ensure(currentDate);if(!entry.sessions.length)entry.sessions.push(newSession(autoWorkout()));setActive(entry.sessions.length-1);}
+setActive(entry.sessions.length-1);
 
 /* ===================== TODAY ===================== */
-function progressPct(){const exs=dayEx(entry.workout);let done=0;exs.forEach(ex=>{const s=entry.sets[ex.id];if(s&&s.some(v=>+v>0))done++;});return exs.length?Math.round(done/exs.length*100):0;}
+function progressPct(){const exs=dayEx(S.workout);let done=0;exs.forEach(ex=>{const s=S.sets[ex.id];if(s&&s.some(v=>+v>0))done++;});return exs.length?Math.round(done/exs.length*100):0;}
 function renderRing(){const p=progressPct();document.getElementById("ringProg").style.strokeDashoffset=201-(201*p/100);document.getElementById("ringPct").textContent=p+"%";}
-function renderDaySwitch(){const c=document.getElementById("daySwitch");c.innerHTML="";ORDER.forEach(k=>{const b=document.createElement("button");b.textContent="Day "+k;if(k===entry.workout)b.className="on";b.onclick=()=>{entry.workout=k;persist(currentDate);renderToday();};c.appendChild(b);});}
+function renderDaySwitch(){const c=document.getElementById("daySwitch");c.innerHTML="";ORDER.forEach(k=>{const b=document.createElement("button");b.textContent="Day "+k;if(k===S.workout)b.className="on";b.onclick=()=>{S.workout=k;persist(currentDate);renderToday();};c.appendChild(b);});}
+function renderSessionBar(){
+  const bar=document.getElementById("sessionBar"); if(!bar)return;
+  let h="";
+  entry.sessions.forEach((s,i)=>{h+='<button class="schip'+(i===curSess?' on':'')+(s.done?' done':'')+'" data-i="'+i+'" type="button">'+(s.done?'✓ ':'')+'S'+(i+1)+' · '+esc(s.workout)+'</button>';});
+  h+='<button class="schip add" id="addSess" type="button">＋ Session</button>';
+  if(entry.sessions.length>1)h+='<button class="schip del" id="delSess" type="button">✕ Remove S'+(curSess+1)+'</button>';
+  bar.innerHTML=h;
+  bar.querySelectorAll(".schip[data-i]").forEach(b=>b.onclick=()=>{setActive(+b.dataset.i);renderToday();});
+  const add=document.getElementById("addSess"); if(add)add.onclick=()=>{entry.sessions.push(newSession(autoWorkout()));setActive(entry.sessions.length-1);persist(currentDate);renderToday();};
+  const del=document.getElementById("delSess"); if(del)del.onclick=()=>{const s=entry.sessions[curSess];if(sessLogged(s)&&!confirm("Remove this session and its logged sets?"))return;entry.sessions.splice(curSess,1);setActive(entry.sessions.length-1);persist(currentDate);renderToday();};
+}
 function renderExList(){
-  const tpl=PROGRAM[entry.workout]; const exs=dayEx(entry.workout);
+  const tpl=PROGRAM[S.workout]; const exs=dayEx(S.workout);
   document.getElementById("focusTitle").innerHTML='<small>'+tpl.tag+' · '+exs.length+' moves</small>'+tpl.name;
   const list=document.getElementById("exList");list.innerHTML="";
   exs.forEach(ex=>{
-    const saved=entry.sets[ex.id]||Array(ex.sets).fill("");
+    const saved=S.sets[ex.id]||Array(ex.sets).fill("");
     const A=adapt(ex);
     const isDone=saved.some(v=>+v>0);
     const el=document.createElement("div");el.className="ex"+(isDone?" done":"");
@@ -877,9 +974,9 @@ function renderExList(){
       '</div></div>';
     el.querySelector(".ex-head").onclick=e=>{if(e.target.closest(".ex-check"))return;el.classList.toggle("open");};
     el.querySelector(".ex-check").onclick=e=>{e.stopPropagation();
-      const arr=entry.sets[ex.id]||Array(ex.sets).fill("");
-      if(arr.some(v=>+v>0)){entry.sets[ex.id]=Array(ex.sets).fill("");}
-      else{const m=parseInt(A.reps)||10;entry.sets[ex.id]=Array(ex.sets).fill(m);}
+      const arr=S.sets[ex.id]||Array(ex.sets).fill("");
+      if(arr.some(v=>+v>0)){S.sets[ex.id]=Array(ex.sets).fill("");}
+      else{const m=parseInt(A.reps)||10;S.sets[ex.id]=Array(ex.sets).fill(m);}
       persist(currentDate);renderToday();
     };
     const rb=el.querySelector(".ex-replace"); if(rb) rb.onclick=ev=>{ev.stopPropagation();replaceExercise(ex,rb);};
@@ -890,30 +987,32 @@ function renderExList(){
     inp.addEventListener("input",()=>{
       const id=inp.dataset.ex,s=+inp.dataset.set;
       const f=exs.find(e=>e.id===id); const n=f?f.sets:3;
-      if(!entry.sets[id])entry.sets[id]=Array(n).fill("");
-      entry.sets[id][s]=inp.value;
+      if(!S.sets[id])S.sets[id]=Array(n).fill("");
+      S.sets[id][s]=inp.value;
       persist(currentDate);renderRing();updateStreakLine();refreshChecks();
     });
   });
   initFigs();
 }
-function refreshChecks(){const exs=dayEx(entry.workout);document.querySelectorAll("#exList .ex").forEach((el,i)=>{const ex=exs[i];if(!ex)return;const s=entry.sets[ex.id];el.classList.toggle("done",!!(s&&s.some(v=>+v>0)));});}
+function refreshChecks(){const exs=dayEx(S.workout);document.querySelectorAll("#exList .ex").forEach((el,i)=>{const ex=exs[i];if(!ex)return;const s=S.sets[ex.id];el.classList.toggle("done",!!(s&&s.some(v=>+v>0)));});}
 function renderCreatine(){document.getElementById("creatineToggle").classList.toggle("on",entry.creatine);}
-function renderFinish(){const b=document.getElementById("finishBtn");b.classList.toggle("done",entry.done);b.textContent=entry.done?"✓ SESSION LOGGED":"LOG TONIGHT'S WORK";}
-function renderToday(){const wl=document.getElementById("whoLine");if(wl)wl.textContent=(PROFILE.name||(ME?ME.name:""))+(PROFILE.height?" · "+PROFILE.height:"")+(PROFILE.weight?" · "+PROFILE.weight:"");document.getElementById("todayDate").textContent=fmtNice(currentDate);renderDaySwitch();renderExList();renderRing();renderCreatine();renderFinish();updateStreakLine();}
+function renderFinish(){const b=document.getElementById("finishBtn");b.classList.toggle("done",S.done);b.textContent=S.done?"✓ SESSION LOGGED":(entry.sessions.length>1?"LOG THIS SESSION":"LOG TONIGHT'S WORK");}
+function renderToday(){const wl=document.getElementById("whoLine");if(wl)wl.textContent=(PROFILE.name||(ME?ME.name:""))+(PROFILE.height?" · "+PROFILE.height:"")+(PROFILE.weight?" · "+PROFILE.weight:"");document.getElementById("todayDate").textContent=fmtNice(currentDate);renderSessionBar();renderDaySwitch();renderExList();renderRing();renderCreatine();renderFinish();updateStreakLine();}
 
-function computeStreak(){let s=0,d=new Date();for(;;){const k=d.toISOString().slice(0,10);if(DB[k]&&DB[k].done){s++;d.setDate(d.getDate()-1);}else break;}return s;}
-function updateStreakLine(){const s=computeStreak();const el=document.getElementById("streakLine");el.textContent=entry.done?("🔥 "+s+"-day streak — locked in. See you tomorrow."):(s>0?("🔥 "+s+"-day streak going. Log tonight to keep it alive."):"Log a session to start your streak.");}
+function dayLogged(k){const e=DB[k];if(!e)return false;return normalizeEntry(e).sessions.some(sessLogged);}
+function computeStreak(){let d=new Date(Date.now()-DAY_CUTOFF_H*3600*1000);if(!dayLogged(ymd(d)))d.setDate(d.getDate()-1);let s=0;for(;;){if(dayLogged(ymd(d))){s++;d.setDate(d.getDate()-1);}else break;}return s;}
+function updateStreakLine(){const s=computeStreak();const el=document.getElementById("streakLine");const lg=dayLogged(currentDate);el.textContent=lg?("🔥 "+s+"-day streak — locked in."):(s>0?("🔥 "+s+"-day streak going. Log tonight to keep it alive."):"Log a session to start your streak.");}
 
 document.getElementById("creatineToggle").onclick=()=>{entry.creatine=!entry.creatine;persist(currentDate);renderCreatine();};
-document.getElementById("finishBtn").onclick=()=>{entry.done=!entry.done;persist(currentDate);renderFinish();updateStreakLine();if(entry.done){const t=document.getElementById("toast");t.classList.add("show");setTimeout(()=>t.classList.remove("show"),1800);}};
+document.getElementById("finishBtn").onclick=()=>{S.done=!S.done;if(S.done)S.ts=Date.now();persist(currentDate);renderFinish();renderSessionBar();updateStreakLine();if(S.done){const t=document.getElementById("toast");t.classList.add("show");setTimeout(()=>t.classList.remove("show"),1800);}};
 
 /* ===================== PROGRESS ===================== */
 function renderProgress(){
   const dates=Object.keys(DB);
+  const logged=allSessions().filter(x=>sessLogged(x.s));
   document.getElementById("sStreak").textContent=computeStreak();
-  document.getElementById("sTotal").textContent=dates.filter(d=>DB[d].done).length;
-  document.getElementById("sCreatine").textContent=dates.filter(d=>DB[d].creatine).length;
+  document.getElementById("sTotal").textContent=logged.length;
+  document.getElementById("sCreatine").textContent=dates.filter(d=>normalizeEntry(DB[d]).creatine).length;
   const heat=document.getElementById("heat");heat.innerHTML="";
   const tStr=today();
   const gs=new Date(tStr+"T00:00:00Z");
@@ -924,17 +1023,18 @@ function renderProgress(){
     if(k>tStr){c.classList.add("future");}
     else{
       if(k===tStr)c.classList.add("today");
-      const e=DB[k];if(e){let pct=0;if(e.workout){const w=PROGRAM[e.workout];let dn=0;w.ex.forEach(x=>{const s=e.sets[x.id];if(s&&s.some(v=>+v>0))dn++;});pct=dn/w.ex.length;}
-        if(e.done||pct>=.99)c.classList.add("l3");else if(pct>=.5)c.classList.add("l2");else if(pct>0||e.creatine)c.classList.add("l1");}
+      const e=DB[k];if(e){const n=normalizeEntry(e);let pct=0,anyDone=false,nLog=0;
+        n.sessions.forEach(s=>{if(s.done)anyDone=true;if(sessLogged(s))nLog++;const exs=PROGRAM[s.workout]?PROGRAM[s.workout].ex:[];let dn=0;exs.forEach(x=>{const ss=s.sets[x.id];if(ss&&ss.some(v=>+v>0))dn++;});const p=exs.length?dn/exs.length:0;if(p>pct)pct=p;});
+        if(anyDone||pct>=.99||nLog>=2)c.classList.add("l3");else if(pct>=.5)c.classList.add("l2");else if(pct>0||n.creatine)c.classList.add("l1");}
     }
     c.title=fmtNice(k);heat.appendChild(c);
   }
-  const sess=dates.filter(d=>DB[d].done).sort().slice(-14);
+  const sess=logged.slice(-14);
   const bars=document.getElementById("bars"),barx=document.getElementById("barx");bars.innerHTML="";barx.innerHTML="";
-  const vols=sess.map(d=>{let tot=0;Object.values(DB[d].sets||{}).forEach(a=>a.forEach(v=>tot+=(+v||0)));return{d,tot};});
+  const vols=sess.map(x=>({d:x.d,w:x.s.workout,tot:sessReps(x.s)}));
   const max=Math.max(1,...vols.map(v=>v.tot));
   if(!vols.length)bars.innerHTML='<div style="color:var(--faint);font-size:13px;align-self:center;width:100%;text-align:center">Log a session to see your volume climb.</div>';
-  vols.forEach(v=>{const b=document.createElement("div");b.className="bar"+(v.tot?"":" empty");b.style.height=(v.tot/max*100)+"%";b.title=v.tot+" reps · "+fmtNice(v.d);bars.appendChild(b);const x=document.createElement("span");x.textContent=DB[v.d].workout||"";barx.appendChild(x);});
+  vols.forEach(v=>{const b=document.createElement("div");b.className="bar"+(v.tot?"":" empty");b.style.height=(v.tot/max*100)+"%";b.title=v.tot+" reps · "+fmtNice(v.d);bars.appendChild(b);const x=document.createElement("span");x.textContent=v.w||"";barx.appendChild(x);});
   const tr=vols.reduce((a,v)=>a+v.tot,0);
   document.getElementById("volNote").innerHTML=vols.length?("Total reps across these sessions: <b style='color:var(--ember)'>"+tr+"</b>. Rising bars = progressive overload working."):"";
 }
@@ -957,14 +1057,15 @@ async function renderCrew(){
     const {data:logs}=await sb.from(TABLE).select("user_id,payload").gte("log_date",ws).lte("log_date",we);
     const {data:profs}=await sb.from(T_PROFILE).select("user_id,name");
     const nameOf={}; (profs||[]).forEach(p=>{if(p.name)nameOf[p.user_id]=p.name;});
-    const stat={}; Object.keys(USERS).forEach(c=>{const u=USERS[c];stat[u.id]={id:u.id,name:nameOf[u.id]||u.name,sessions:0,reps:0};});
-    (logs||[]).forEach(r=>{const u=stat[r.user_id]; if(!u)return; const p=r.payload||{}; if(p.done)u.sessions++; Object.values(p.sets||{}).forEach(a=>a.forEach(v=>u.reps+=(+v||0)));});
+    const stat={}; Object.keys(USERS).forEach(c=>{const u=USERS[c];stat[u.id]={id:u.id,name:nameOf[u.id]||u.name,sessions:0,reps:0,resisted:0};});
+    (logs||[]).forEach(r=>{const u=stat[r.user_id]; if(!u)return; const p=normalizeEntry(r.payload); p.sessions.forEach(s=>{if(s.done)u.sessions++; u.reps+=sessReps(s);});});
+    try{const {data:res}=await sb.from(T_RESIST).select("user_id,cals,won,created_at").gte("created_at",ws+"T00:00:00").lte("created_at",we+"T23:59:59");(res||[]).forEach(r=>{if(r.won===false)return;if(stat[r.user_id])stat[r.user_id].resisted+=(+r.cals||0);});}catch(e){console.warn("crew resist",e);}
     const rows=Object.keys(stat).map(k=>stat[k]).sort((a,b)=>b.sessions-a.sessions||b.reps-a.reps);
     const active=rows.some(r=>r.sessions>0||r.reps>0);
     board.innerHTML=rows.map((r,i)=>{
       const lead=active&&i===0;
       const tub=active&&i===rows.length-1&&rows.length>1&&(r.sessions<rows[0].sessions||r.reps<rows[0].reps);
-      return '<div class="crewrow'+(ME&&r.id===ME.id?' me':'')+'"><div class="crewrank">'+(lead?'👑':tub?'🪣':(i+1))+'</div><div class="crewname">'+esc(r.name)+(ME&&r.id===ME.id?' (you)':'')+(tub?'<br><span style="color:var(--ember);font-size:12px">Tub-o-Shit 💩</span>':'')+'</div><div class="crewstat"><b>'+r.sessions+'</b> sess<br>'+r.reps+' reps</div></div>';
+      return '<div class="crewrow'+(ME&&r.id===ME.id?' me':'')+'"><div class="crewrank">'+(lead?'👑':tub?'🪣':(i+1))+'</div><div class="crewname">'+esc(r.name)+(ME&&r.id===ME.id?' (you)':'')+(tub?'<br><span style="color:var(--ember);font-size:12px">Tub-o-Shit 💩</span>':'')+'</div><div class="crewstat"><b>'+r.sessions+'</b> sess<br>'+r.reps+' reps'+(r.resisted?'<br>'+r.resisted.toLocaleString()+' cal skipped':'')+'</div></div>';
     }).join('');
     await renderWall();
   }catch(e){console.warn(e);board.innerHTML='<p class="note">Couldn\u2019t load crew stats.</p>';}
@@ -988,19 +1089,118 @@ async function sendMsg(){
   catch(e){alert("Couldn't send: "+e.message);}
 }
 
+/* ===================== RESIST (beat the graze) ===================== */
+const T_RESIST="nightlift_resist";
+let RESIST=[];
+const CRAVE_ALT={
+ salty:"Crave crunch? A handful of almonds, some baby carrots, or air-popped popcorn. Big glass of water first.",
+ sweet:"Sweet tooth? Fruit, a few berries, or Greek yogurt — fiber and protein kill the craving better. Water or tea first.",
+ choc:"Want chocolate? A square of 85% dark, or Greek yogurt stirred with cocoa. Drink water and wait 10 minutes.",
+ drink:"Swap for sparkling water with lime, plain coffee, or tea. Liquid sugar is the easiest win to cut.",
+ baked:"Reach for Greek yogurt, a banana, or a rice cake with nut butter. Water first, then give it 10 minutes.",
+ fried:"Want hot and savory? Beef jerky, edamame, or a hard-boiled egg. Big glass of water first.",
+ creamy:"Try Greek yogurt or cottage cheese with fruit — creamy, but high protein."
+};
+const CRAVINGS=[
+ {name:"Potato chips",emoji:"🥔",cals:150,sugar:1,cat:"salty"},
+ {name:"Tortilla chips",emoji:"🌽",cals:140,sugar:1,cat:"salty"},
+ {name:"Pretzels",emoji:"🥨",cals:110,sugar:1,cat:"salty"},
+ {name:"Cheese crackers",emoji:"🧀",cals:150,sugar:2,cat:"salty"},
+ {name:"Candy bar",emoji:"🍫",cals:250,sugar:25,cat:"choc"},
+ {name:"Chocolate handful",emoji:"🍫",cals:200,sugar:22,cat:"choc"},
+ {name:"Gummy candy",emoji:"🐻",cals:140,sugar:22,cat:"sweet"},
+ {name:"Cookies (2)",emoji:"🍪",cals:160,sugar:14,cat:"sweet"},
+ {name:"Donut",emoji:"🍩",cals:250,sugar:12,cat:"baked"},
+ {name:"Brownie",emoji:"🟫",cals:230,sugar:20,cat:"baked"},
+ {name:"Ice cream",emoji:"🍨",cals:210,sugar:21,cat:"creamy"},
+ {name:"Muffin",emoji:"🧁",cals:360,sugar:30,cat:"baked"},
+ {name:"Croissant / pastry",emoji:"🥐",cals:300,sugar:8,cat:"baked"},
+ {name:"Bagel + cream cheese",emoji:"🥯",cals:350,sugar:6,cat:"baked"},
+ {name:"Pizza slice",emoji:"🍕",cals:285,sugar:4,cat:"fried"},
+ {name:"French fries",emoji:"🍟",cals:230,sugar:0,cat:"fried"},
+ {name:"Soda",emoji:"🥤",cals:140,sugar:39,cat:"drink"},
+ {name:"Energy drink",emoji:"⚡",cals:160,sugar:38,cat:"drink"},
+ {name:"Sweet coffee drink",emoji:"☕",cals:250,sugar:30,cat:"drink"},
+ {name:"Fruit juice",emoji:"🧃",cals:170,sugar:36,cat:"drink"},
+ {name:"Beer",emoji:"🍺",cals:150,sugar:0,cat:"drink"},
+ {name:"Sugary trail mix",emoji:"🥜",cals:200,sugar:14,cat:"sweet"},
+ {name:"Other snack",emoji:"🍴",cals:150,sugar:8,cat:"salty"},
+ {name:"Other sweet",emoji:"🍬",cals:200,sugar:22,cat:"sweet"}
+];
+function resistKey(){return "nightlift_resist_"+(ME?ME.id:"anon");}
+function loadResist(){try{RESIST=JSON.parse(store.get(resistKey()))||[];}catch(e){RESIST=[];}}
+function saveResistLocal(){try{store.set(resistKey(),JSON.stringify(RESIST.slice(-600)));}catch(e){}}
+async function pullResist(){if(!cloud)return;try{const {data}=await sb.from(T_RESIST).select("item,cals,sugar,won,created_at").eq("user_id",ME.id).order("created_at",{ascending:true}).limit(1000);if(data){RESIST=data.map(r=>({item:r.item,cals:+r.cals||0,sugar:+r.sugar||0,won:r.won!==false,ts:Date.parse(r.created_at)||Date.now()}));saveResistLocal();const v=document.getElementById("view-resist");if(v&&!v.classList.contains("hide"))renderResist();}}catch(e){console.warn("resist pull",e);}}
+async function logResist(item,cals,sugar,won){const row={item:String(item||"Snack"),cals:Math.max(0,Math.round(+cals||0)),sugar:Math.max(0,Math.round((+sugar||0)*10)/10),won:won!==false,ts:Date.now()};RESIST.push(row);saveResistLocal();renderResist();if(cloud){try{await sb.from(T_RESIST).insert({user_id:ME.id,item:row.item,cals:row.cals,sugar:row.sugar,won:row.won});}catch(e){console.warn("resist insert",e);}}}
+function fmtLbs(c){const v=c/3500;return v<1?v.toFixed(2):v.toFixed(1);}
+function resistWins(){return RESIST.filter(r=>r.won!==false);}
+function rday(r){return ymd(new Date(r.ts-DAY_CUTOFF_H*3600*1000));}
+function resistStreak(){const days={};resistWins().forEach(r=>{days[rday(r)]=1;});let d=new Date(Date.now()-DAY_CUTOFF_H*3600*1000);if(!days[ymd(d)])d.setDate(d.getDate()-1);let n=0;for(;;){if(days[ymd(d)]){n++;d.setDate(d.getDate()-1);}else break;}return n;}
+function renderResist(){
+  const tally=document.getElementById("resistTally"); if(!tally)return;
+  const [ws,we]=weekRange();
+  const inWk=r=>{const d=rday(r);return d>=ws&&d<=we;};
+  const wins=resistWins();
+  const wkWins=wins.filter(inWk);
+  const wkGive=RESIST.filter(r=>r.won===false&&inWk(r)).length;
+  const sum=l=>l.reduce((a,r)=>a+r.cals,0);
+  const sug=l=>l.reduce((a,r)=>a+r.sugar,0);
+  const streak=resistStreak();
+  tally.innerHTML='<div class="rstats"><div class="rstat"><b>'+(streak>0?'🔥'+streak:'0')+'</b><span>day resist streak</span></div><div class="rstat"><b>'+wkWins.length+'</b><span>skipped this week</span></div><div class="rstat"><b>'+sum(wkWins).toLocaleString()+'</b><span>cal resisted</span></div></div>'+
+    '<div class="rlb">All-time: <b>'+wins.length+'</b> skips · <b>'+sum(wins).toLocaleString()+'</b> cal · <b>'+Math.round(sug(wins))+'g</b> sugar · ≈<b>'+fmtLbs(sum(wins))+' lb</b> not gained'+(wkGive>0?' <span style="color:var(--faint)">· '+wkGive+' slip'+(wkGive>1?'s':'')+' this week, no judgment</span>':'')+'</div>';
+  const grid=document.getElementById("cravingGrid");
+  if(grid&&!grid.dataset.filled){grid.innerHTML=CRAVINGS.map((c,i)=>'<button class="cravetile" type="button" data-i="'+i+'"><span class="ce">'+c.emoji+'</span><span class="cn">'+esc(c.name)+'</span><small>≈'+c.cals+' cal</small></button>').join('');grid.dataset.filled="1";grid.querySelectorAll(".cravetile").forEach(b=>b.onclick=()=>showCrave(CRAVINGS[+b.dataset.i]));}
+  const hist=document.getElementById("resistHistory");
+  if(hist){const recent=RESIST.slice().reverse().slice(0,14);hist.innerHTML=recent.length?recent.map(r=>'<div class="rrow'+(r.won===false?' gave':'')+'"><span>'+(r.won===false?'· ':'✓ ')+esc(r.item)+'</span><span class="rmeta">'+r.cals+' cal · '+r.sugar+'g</span></div>').join(''):'<p class="note">No skips logged yet. Next craving, come here first.</p>';}
+}
+let surfTimer=null, surfEnd=0;
+const SURF_PROMPTS=["Drink a full glass of water — slowly.","Walk to another room for a minute.","10 slow breaths: in for 4, out for 6.","Stand up and stretch your arms overhead.","Tidy one small thing near you.","Fire a taunt at the crew instead 🔥","Ask yourself: hungry, or just bored?","Brush your teeth — it kills the craving."];
+function clearSurf(){if(surfTimer){clearInterval(surfTimer);surfTimer=null;}}
+function bankWin(c){clearSurf();logResist(c.name,c.cals,c.sugar,true);const p=document.getElementById("resistPanel");if(!p)return;const st=resistStreak();p.innerHTML='<div class="cravecard" style="text-align:center"><div style="font-size:32px">💪</div><div class="cravename">Banked.</div><div class="cravenum">'+c.cals+' cal &amp; '+c.sugar+'g sugar you didn\u2019t eat.</div><div class="note" style="margin-top:6px;color:var(--ember)">'+(st>1?'🔥 '+st+'-day resist streak — don\u2019t break it.':'Resist streak started. 🔥')+'</div></div>';setTimeout(()=>{const pp=document.getElementById("resistPanel");if(pp&&pp.textContent.indexOf("Banked")>=0)pp.innerHTML="";},3400);}
+function giveIn(c){clearSurf();logResist(c.name,c.cals,c.sugar,false);const p=document.getElementById("resistPanel");if(!p)return;p.innerHTML='<div class="cravecard" style="text-align:center"><div class="cravename" style="font-size:18px">Logged — no big deal.</div><p class="note">One snack won\u2019t undo anything. Drink some water and get back to it — next craving, you\u2019ve got it.</p></div>';setTimeout(()=>{const pp=document.getElementById("resistPanel");if(pp&&pp.textContent.indexOf("no big deal")>=0)pp.innerHTML="";},3800);}
+function startSurf(c){
+  clearSurf();
+  const p=document.getElementById("resistPanel"); if(!p)return;
+  const DUR=600; surfEnd=Date.now()+DUR*1000;
+  p.innerHTML='<div class="cravecard"><div class="surfwrap"><svg viewBox="0 0 72 72" class="surfsvg"><circle cx="36" cy="36" r="32" class="surfbg"></circle><circle id="surfRing" cx="36" cy="36" r="32" class="surffg" transform="rotate(-90 36 36)"></circle></svg><div class="surftime" id="surfTime">10:00</div></div><div class="cravename" style="text-align:center;font-size:18px">Ride out the '+esc(c.name)+'</div><p class="note" id="surfPrompt" style="text-align:center;min-height:36px">Drink a full glass of water — slowly.</p><div class="cravebtns"><button class="finish" id="surfBank" type="button" style="font-size:16px">BEAT IT EARLY — BANK THE WIN</button><button class="cravecancel" id="surfGiveIn" type="button">I gave in</button></div></div>';
+  document.getElementById("surfBank").onclick=()=>bankWin(c);
+  document.getElementById("surfGiveIn").onclick=()=>giveIn(c);
+  const draw=()=>{
+    const te=document.getElementById("surfTime"); if(!te){clearSurf();return;}
+    const left=Math.max(0,Math.round((surfEnd-Date.now())/1000));
+    te.textContent=Math.floor(left/60)+":"+String(left%60).padStart(2,"0");
+    const pr=document.getElementById("surfPrompt"); const done=left<=0;
+    if(pr)pr.textContent=done?"You rode it out — that craving lost. Bank it. 💪":SURF_PROMPTS[Math.floor((DUR-left)/45)%SURF_PROMPTS.length];
+    const ring=document.getElementById("surfRing"); if(ring)ring.style.strokeDashoffset=String(201-(201*(DUR-left)/DUR));
+    const bk=document.getElementById("surfBank"); if(bk&&done)bk.textContent="I MADE IT — BANK THE WIN";
+    if(done)clearSurf();
+  };
+  draw(); surfTimer=setInterval(draw,1000);
+  p.scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+function showCrave(c){
+  clearSurf();
+  const p=document.getElementById("resistPanel"); if(!p)return;
+  p.innerHTML='<div class="cravecard"><div class="craveh"><span class="ce big">'+c.emoji+'</span><div><div class="cravename">'+esc(c.name)+'</div><div class="cravenum">≈'+c.cals+' cal · '+c.sugar+'g sugar</div></div></div><p class="note">'+CRAVE_ALT[c.cat]+'</p><p class="note" style="color:var(--faint)">Cravings spike then fade in about 10 minutes. Ride it out and it usually passes. Truly hungry? Eat something real with protein, not this.</p><div class="cravebtns"><button class="finish" id="surfStart" type="button" style="font-size:16px">⏱ RIDE IT OUT · 10 MIN</button><button class="finish" id="bankNow" type="button" style="font-size:15px;background:var(--panel);color:var(--ember);border:1px solid var(--line)">Skip it now — bank it</button><button class="cravecancel" id="gaveIn" type="button">I had it</button></div></div>';
+  document.getElementById("surfStart").onclick=()=>startSurf(c);
+  document.getElementById("bankNow").onclick=()=>bankWin(c);
+  document.getElementById("gaveIn").onclick=()=>giveIn(c);
+  p.scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+
 /* ===================== GUIDE library ===================== */
 function renderLibrary(){const lib=document.getElementById("libList");lib.innerHTML="";ORDER.forEach(k=>{const w=PROGRAM[k];const d=document.createElement("div");d.className="lib-day";d.innerHTML='<h3><i>Day '+k+'</i> '+w.name+'</h3>'+w.ex.map(ex=>'<p class="note" style="margin-top:4px">• <b>'+ex.name+'</b>'+(ex.star?' ★':'')+' — '+ex.sets+'×'+ex.reps+' <span style="color:var(--gold)">('+ex.load+')</span></p>').join('');lib.appendChild(d);});}
 
 /* ===================== reset ===================== */
 document.getElementById("resetBtn").onclick=async()=>{
-  if(!confirm("Clear ALL logged sessions everywhere (cloud + this device)?"))return;
-  DB={};saveLocal();
-  if(cloud){try{await sb.from(TABLE).delete().eq("user_id",ME.id);}catch(e){console.warn(e);}}
-  currentDate=today();entry=ensure(currentDate);entry.workout=autoWorkout();renderToday();renderProgress();
+  if(!confirm("Clear ALL logged sessions and resist wins everywhere (cloud + this device)?"))return;
+  DB={};saveLocal();RESIST=[];saveResistLocal();
+  if(cloud){try{await sb.from(TABLE).delete().eq("user_id",ME.id);}catch(e){console.warn(e);}try{await sb.from(T_RESIST).delete().eq("user_id",ME.id);}catch(e){console.warn(e);}}
+  openDay();renderToday();renderProgress();
 };
 
 /* ===================== tabs ===================== */
-document.querySelectorAll("nav.tabs button").forEach(btn=>{btn.onclick=()=>{document.querySelectorAll("nav.tabs button").forEach(b=>b.classList.remove("on"));btn.classList.add("on");const v=btn.dataset.view;["today","progress","guide","crew"].forEach(id=>document.getElementById("view-"+id).classList.toggle("hide",id!==v));if(v==="progress")renderProgress();if(v==="crew")renderCrew();window.scrollTo({top:0,behavior:"smooth"});};});
+document.querySelectorAll("nav.tabs button").forEach(btn=>{btn.onclick=()=>{if(typeof clearSurf==="function")clearSurf();document.querySelectorAll("nav.tabs button").forEach(b=>b.classList.remove("on"));btn.classList.add("on");const v=btn.dataset.view;["today","progress","guide","crew","resist"].forEach(id=>document.getElementById("view-"+id).classList.toggle("hide",id!==v));if(v==="progress")renderProgress();if(v==="crew")renderCrew();if(v==="resist")renderResist();window.scrollTo({top:0,behavior:"smooth"});};});
 
 /* crew controls */
 function renderGear(){const g=document.getElementById("gearTips");if(!g)return;g.innerHTML=gearAdvice().map(t=>'<p class="note" style="margin-top:8px">• '+t+'</p>').join('');}
@@ -1023,12 +1223,14 @@ async function openApp(){
   const g=document.getElementById("gate"); g.classList.add("hide"); g.style.display="none";
   const aw=document.getElementById("appWrap"); aw.classList.remove("hide"); aw.style.display="block";
   const tb=document.getElementById("tabs"); tb.classList.remove("hide"); tb.style.display="flex";
-  DB=loadLocal(); currentDate=today(); entry=ensure(currentDate); if(!entry.workout)entry.workout=autoWorkout();
+  DB=loadLocal(); openDay();
   try{ renderToday(); renderLibrary(); }catch(e){ console.error(e); }
   await initCloud();
   await loadProfile();
+  loadResist();
   await pullCloud();
-  entry=ensure(currentDate); if(!entry.workout)entry.workout=autoWorkout();
+  await pullResist();
+  openDay();
   try{ renderToday(); }catch(e){ console.warn(e); }
 }
 const gi=document.getElementById("gateInput"),gb=document.getElementById("gateBtn"),gh=document.querySelector("#gate .hint");

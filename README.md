@@ -31,6 +31,46 @@ and a matching animation. “Undo swap” reverts. No API key, no cost, works of
 - nightlift_wall — shared taunt/support messages
   RLS on, anon read/write. URL + anon key are baked into the CONFIG block.
 
+## Resist tab (beat the graze)
+
+A tab to open *when you’re tempted to snack*. Tap what you’re craving from a grid of
+~24 common culprits. Then three behavior-tuned paths:
+
+- **⏱ Ride it out (10 min):** an urge-surf countdown ring with rotating distraction
+  prompts (water, walk, breathe, taunt the crew). Cravings fade in ~10 min; you wait
+  *with* it, then bank the win. Beat it early anytime.
+- **Skip it now — bank it:** instant win for when you don’t need the timer.
+- **I had it:** a no-shame give-in log (“no big deal”) so the data stays honest and
+  one slip doesn’t blow up the habit.
+  Wins build a **resist streak** (loss-aversion: “don’t break your streak”) alongside
+  skips this week, calories resisted, sugar dodged, and an all-time “≈ lb not gained”
+  (cal ÷ 3500). Slips are counted gently and never punished. The Crew board shows each
+  person’s calories resisted this week (wins only). Framing stays swap-and-water, not
+  skip-real-meals; numbers are labeled estimates.
+
+## Day rollover at 4 AM + multiple sessions per day
+
+- The app’s “day” rolls over at **4 AM local**, so a workout logged at 1 AM counts
+  for the night before, not the next morning.
+- The Tonight tab has a **session bar**: tap **＋ Session** to log a second (or third)
+  workout the same day, switch between them, or remove one. Each session has its own
+  focus (A/B/C/D), sets, and Log button. Streak, the Progress stats/heatmap/volume
+  chart, and the Crew weekly standings all count every session.
+
+## Custom equipment + auto-scaled reps  (Crew → Your profile)
+
+Each user lists the kettlebells and dumbbells they own (e.g. `10, 25`). Every
+exercise then shows the right load from their gear and **scales the reps**:
+heavier weight → fewer reps, lighter → more (compounds use your heaviest, isolation
+moves like raises/curls use your lightest). Timed and to-failure work isn’t scaled.
+If someone lacks an implement, it falls back gracefully (KB move → DBs, etc.).
+
+## Gear coach
+
+A card on the Crew tab recommends what to buy next based on what you own and your
+logged reps — if you’re routinely pushing past ~18 reps a set, it nudges you to
+add the next size up (with concrete kettlebell/dumbbell suggestions).
+
 ## Crew tab
 
 - Weekly standings for all three; 👑 leader, 🪣 last place = “Tub-o-Shit”
