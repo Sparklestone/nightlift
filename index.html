@@ -1358,6 +1358,20 @@ const FOODS=[
  {name:"Egg whites (1 cup)",emoji:"🥚",p:26,c:2,cal:125,cat:"meat"},
  {name:"Bacon (3 strips)",emoji:"🥓",p:9,c:0,cal:130,cat:"meat"},
  {name:"Tofu (1 cup)",emoji:"🍱",p:20,c:5,cal:180,cat:"meat"},
+ {name:"Egg (1 large)",emoji:"🥚",p:6,c:0,cal:72,cat:"meat"},
+ {name:"Hard-boiled egg",emoji:"🥚",p:6,c:1,cal:78,cat:"meat"},
+ {name:"Ground chicken (4 oz)",emoji:"🍗",p:20,c:0,cal:160,cat:"meat"},
+ {name:"Pork tenderloin (4 oz)",emoji:"🥩",p:26,c:0,cal:150,cat:"meat"},
+ {name:"Ham (2 oz)",emoji:"🍖",p:10,c:1,cal:70,cat:"meat"},
+ {name:"Sausage (2 links)",emoji:"🌭",p:11,c:2,cal:180,cat:"meat"},
+ {name:"Lamb (4 oz)",emoji:"🍖",p:23,c:0,cal:250,cat:"meat"},
+ {name:"Cod / white fish (4 oz)",emoji:"🐟",p:23,c:0,cal:90,cat:"meat"},
+ {name:"Tilapia (4 oz)",emoji:"🐟",p:23,c:0,cal:110,cat:"meat"},
+ {name:"Sardines (1 can)",emoji:"🐟",p:23,c:0,cal:190,cat:"meat"},
+ {name:"Crab (4 oz)",emoji:"🦀",p:18,c:0,cal:85,cat:"meat"},
+ {name:"Scallops (4 oz)",emoji:"🐚",p:20,c:4,cal:110,cat:"meat"},
+ {name:"Edamame (1 cup)",emoji:"🫛",p:17,c:14,cal:190,cat:"meat"},
+ {name:"Tempeh (½ cup)",emoji:"🍱",p:15,c:5,cal:160,cat:"meat"},
  /* fruit */
  {name:"Apple",emoji:"🍎",p:0,c:25,cal:95,cat:"fruit"},
  {name:"Banana",emoji:"🍌",p:1,c:27,cal:105,cat:"fruit"},
@@ -1402,7 +1416,7 @@ const FOODS=[
  {name:"Cheese (1 oz)",emoji:"🧀",p:7,c:1,cal:110,cat:"dairy"},
  {name:"String cheese",emoji:"🧀",p:7,c:1,cal:80,cat:"dairy"}
 ];
-const FOOD_CATS=[["shake","🥤 Protein"],["meat","🍗 Meat"],["fruit","🍎 Fruit"],["veg","🥦 Veg"],["carb","🍚 Carbs"],["dairy","🥛 Dairy"]];
+const FOOD_CATS=[["shake","🥤 Protein"],["meat","🍗 Meat & eggs"],["fruit","🍎 Fruit"],["veg","🥦 Veg"],["carb","🍚 Carbs"],["dairy","🥛 Dairy"]];
 let FOOD=[], foodCat="shake", foodSel=null, foodQty=1;
 function foodKey(){return "nightlift_food_"+(ME?ME.id:"anon");}
 function goalKey(){return "nightlift_goals_"+(ME?ME.id:"anon");}
