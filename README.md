@@ -48,6 +48,17 @@ A tab to open *when you’re tempted to snack*. Tap what you’re craving from a
   person’s calories resisted this week (wins only). Framing stays swap-and-water, not
   skip-real-meals; numbers are labeled estimates.
 
+## Plateau detector (opt-in rotation)
+
+The program stays fixed on purpose — progressive overload on the same lifts is what
+builds muscle and lets the app track progress. But when a lift’s total reps go flat
+or decline across its **last 3 logged sessions**, that exercise shows a gold
+**⚠ PLATEAU** badge and auto-opens with a prompt: **Rotate it** (pulls a fresh
+variation from the bank) or **Keep pushing it** (snoozes the prompt 14 days). It only
+fires after 3+ logged sessions of that lift and never swaps anything automatically —
+variety exactly when the data says you’ve stalled, not before. Dismissals are stored
+per device.
+
 ## Day rollover at 4 AM + multiple sessions per day
 
 - The app’s “day” rolls over at **4 AM local**, so a workout logged at 1 AM counts
@@ -87,3 +98,27 @@ needed now.
 
 4-digit codes + public anon key = a casual gate, not real auth. Fine for a crew’s
 workout logs.
+
+## Food tracker (protein & carbs)
+
+A new **Food** tab tracks daily protein and carbs against goals.
+
+- **Common foods** — catalog of staples across Protein/shakes, Meat, Fruit, Veg, Carbs, and Dairy. Tapping one opens a quick editor pre-filled with that food’s protein/carbs/calories so you can **adjust the numbers before logging** (brands differ — e.g. one yogurt’s protein vs another) and pick a **servings** multiplier (×1–20, with a live total). You can also rename it to your brand.
+- **Manual** — type protein, carbs, and (optional) calories for anything not in the list.
+- **Scan label** — snap the Nutrition Facts panel; on-device OCR (Tesseract.js, lazy-loaded from CDN, fully client-side, no API key) reads protein/carbs/calories. Always shown for you to confirm/correct before saving; if OCR can’t read it, you just type the numbers.
+- **Goals** — protein defaults to ≈0.9 g per lb of bodyweight (≈171 g at 190 lb), carbs default 200 g; both editable via “Edit goals”. Stored per device.
+- Daily totals reset on the 4am logical-day boundary like everything else; entries sync to Supabase (`nightlift_food`) and cache locally. Tap ✕ on any entry to remove it.
+
+New table `nightlift_food` (RLS on, anon policy) was migrated automatically.
+
+## Day navigation + move a workout (fixes wrong-day logging)
+
+The 4am rule only helps if you log *during* the midnight–4am window. If you train at 1am but log it later in the day, it lands on the new day with no way to fix it — and there was previously no way to view or log into a past day. Now the Tonight tab has a day bar at the top:
+
+- **◀ / ▶** step to previous/next day (next stops at today — no future logging). Opening a past day lets you log a missed session directly into it.
+- **Move this workout** — one tap sends the active session to the previous day (“Did this last night?”) or, when viewing a past day, forward a day. Reps, sets, and done-state move with it; the view follows so you see it land. Both days re-sync to Supabase.
+- **Today** jumps back to the current day. Tapping the Tonight tab always returns to today.
+
+## Timezone of the 4am cutoff
+
+The logical day (and the 4am rollover) is now pinned to **Mountain time (`America/Denver`)**, not the device’s timezone — so the day a workout counts toward is identical whether you open the app at home or while traveling. This anchors `today()`, both workout/crew streaks, and the resist-day mapping. `America/Denver` follows daylight saving (MST in winter, MDT in summer), so the cutoff is always 4am by the Mountain wall clock. If you actually want fixed MST year-round (Arizona, no DST), change the single constant `APP_TZ` to `America/Phoenix`.

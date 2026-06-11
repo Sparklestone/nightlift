@@ -294,6 +294,28 @@
   .labelbtn{display:block;text-align:center;background:var(--panel-2);border:1px dashed var(--line);border-radius:12px;padding:16px;color:var(--ember);font-weight:800;cursor:pointer;margin-top:6px}
   .xdel{background:none;border:none;color:var(--faint);font-size:13px;cursor:pointer;padding:2px 4px;margin-left:6px}
   .cravetile.tapped{outline:2px solid var(--good);transform:scale(.97)}
+  .cravetile.sel{outline:2px solid var(--ember);background:rgba(255,106,61,.12)}
+  .foodedit{background:var(--panel-2);border:1px solid var(--ember);border-radius:14px;padding:13px;margin-bottom:14px}
+  .fehead{display:flex;justify-content:space-between;align-items:center;font-weight:800;font-size:14px;color:var(--ink);margin-bottom:9px}
+  .fex{background:none;border:none;color:var(--faint);font-size:16px;cursor:pointer;padding:2px 6px}
+  #feName{width:100%;box-sizing:border-box;background:var(--panel);border:1px solid var(--line);border-radius:10px;color:var(--ink);font-size:16px;padding:10px;font-family:inherit;margin-bottom:2px}
+  .feqty{display:flex;align-items:center;justify-content:space-between;margin:6px 0 2px}
+  .feqty>label{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+  .qstep{display:flex;align-items:center;gap:14px}
+  .qstep button{width:34px;height:34px;border-radius:9px;background:var(--panel);border:1px solid var(--line);color:var(--ink);font-size:19px;font-family:'Anton';cursor:pointer;line-height:1}
+  .qstep span{font-family:'Anton';font-size:18px;color:var(--ink);min-width:20px;text-align:center}
+  .fetotal{font-size:13px;color:var(--muted);margin:11px 0 12px}
+  .fetotal b{font-family:'Anton';color:var(--ember);font-size:16px}
+  .daynavwrap{margin-bottom:12px}
+  .daynav{display:flex;align-items:center;gap:10px;justify-content:space-between}
+  .dnav{flex:0 0 auto;width:42px;height:42px;border-radius:12px;background:var(--panel);border:1px solid var(--line);color:var(--ink);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .dnav.off{opacity:.3;cursor:default}
+  .dndate{flex:1;text-align:center;font-family:'Anton';font-size:18px;color:var(--ink);letter-spacing:.01em}
+  .dndate span{color:var(--ember);font-family:'Hanken Grotesk';font-size:13px;font-weight:700}
+  .dmove{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin-top:9px;font-size:12px;color:var(--muted)}
+  .dmove>span{margin-right:1px}
+  .dmovebtn{font-family:inherit;font-weight:700;font-size:12px;padding:6px 11px;border-radius:999px;background:rgba(255,106,61,.12);border:1px solid var(--ember);color:var(--ember);cursor:pointer}
+  .dmovebtn.ghost{background:var(--panel-2);border-color:var(--line);color:var(--muted)}
 </style>
 </head>
 <body>
@@ -324,6 +346,7 @@
 
   <!-- ===================== TODAY ===================== -->
   <section id="view-today">
+    <div class="daynavwrap" id="dayNav"></div>
     <div class="card">
       <span class="eyebrow">Tonight&#39;s session</span>
       <div class="focus">
@@ -493,6 +516,7 @@
         <button class="ftab" data-ftab="label" type="button">Scan label</button>
       </div>
       <div id="foodPane-common" class="foodpane">
+        <div id="foodEdit" class="foodedit hide"></div>
         <div class="foodseg" id="foodCats"></div>
         <div id="foodGrid" class="cravegrid"></div>
       </div>
@@ -981,9 +1005,12 @@ function animTick(ts){
 
 /* ===================== helpers ===================== */
 function ymd(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
-const DAY_CUTOFF_H=4; // a new day begins at 4am local — late-night lifts stay on the prior day
-function today(){return ymd(new Date(Date.now()-DAY_CUTOFF_H*3600*1000));}
-function fmtNice(d){return new Date(d+"T12:00:00").toLocaleDateString(undefined,{weekday:'long',month:'short',day:'numeric'});}
+const DAY_CUTOFF_H=4; // a new day begins at 4am Mountain — late-night lifts stay on the prior day
+const APP_TZ="America/Denver"; // logical day + 4am cutoff anchor to Mountain time, regardless of device timezone
+let _tzFmt=null; try{_tzFmt=new Intl.DateTimeFormat('en-CA',{timeZone:APP_TZ,year:'numeric',month:'2-digit',day:'2-digit'});}catch(e){_tzFmt=null;}
+function ymdTZ(d){ if(!_tzFmt) return ymd(d); const p={}; for(const x of _tzFmt.formatToParts(d)){ if(x.type!=='literal') p[x.type]=x.value; } return p.year+"-"+p.month+"-"+p.day; }
+function today(){return ymdTZ(new Date(Date.now()-DAY_CUTOFF_H*3600*1000));}
+function fmtNice(d){return new Date(d+"T12:00:00Z").toLocaleDateString(undefined,{weekday:'long',month:'short',day:'numeric',timeZone:'UTC'});}
 function newSession(w){return {id:"s"+Date.now().toString(36)+Math.floor(Math.random()*1e3),workout:w||"A",sets:{},done:false,ts:Date.now()};}
 function normalizeEntry(e){
   if(!e)return{creatine:false,sessions:[]};
@@ -1012,6 +1039,39 @@ setActive(entry.sessions.length-1);
 function progressPct(){const exs=dayEx(S.workout);let done=0;exs.forEach(ex=>{const s=S.sets[ex.id];if(s&&s.some(v=>+v>0))done++;});return exs.length?Math.round(done/exs.length*100):0;}
 function renderRing(){const p=progressPct();document.getElementById("ringProg").style.strokeDashoffset=201-(201*p/100);document.getElementById("ringPct").textContent=p+"%";}
 function renderDaySwitch(){const c=document.getElementById("daySwitch");c.innerHTML="";ORDER.forEach(k=>{const b=document.createElement("button");b.textContent="Day "+k;if(k===S.workout)b.className="on";b.onclick=()=>{S.workout=k;persist(currentDate);renderToday();};c.appendChild(b);});}
+function shiftYmd(dateStr,delta){const d=new Date(dateStr+"T12:00:00Z");d.setUTCDate(d.getUTCDate()+delta);return d.toISOString().slice(0,10);}
+function fmtShort(d){return new Date(d+"T12:00:00Z").toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric',timeZone:'UTC'});}
+function gotoDay(dateStr){const t=today();if(dateStr>t)dateStr=t;currentDate=dateStr;entry=ensure(currentDate);if(!entry.sessions.length)entry.sessions.push(newSession(autoWorkout()));setActive(entry.sessions.length-1);renderToday();window.scrollTo({top:0,behavior:'smooth'});}
+function moveSession(delta){
+  if(!S)return;
+  const target=shiftYmd(currentDate,delta); if(target>today())return;
+  const cur=ensure(currentDate); const idx=cur.sessions.indexOf(S); if(idx<0)return;
+  const moved=cur.sessions.splice(idx,1)[0];
+  ensure(target).sessions.push(moved);
+  persist(currentDate); persist(target);
+  currentDate=target; entry=ensure(currentDate); setActive(entry.sessions.length-1);
+  renderToday();
+  const t=document.getElementById("toast");
+  if(t){t.textContent="Moved to "+fmtShort(target)+". ✓";t.classList.add("show");setTimeout(()=>{t.classList.remove("show");t.textContent="Logged. Nice work. 💪";},1900);}
+}
+function renderDayNav(){
+  const w=document.getElementById("dayNav"); if(!w)return;
+  const t=today(), isToday=currentDate===t;
+  const prev=shiftYmd(currentDate,-1), next=shiftYmd(currentDate,1), canNext=next<=t;
+  let h='<div class="daynav"><button class="dnav" id="dnPrev" type="button" aria-label="Previous day">◀</button>'+
+    '<div class="dndate">'+esc(fmtNice(currentDate))+(isToday?' <span>· Today</span>':'')+'</div>'+
+    '<button class="dnav'+(canNext?'':' off')+'" id="dnNext" type="button" aria-label="Next day"'+(canNext?'':' disabled')+'>▶</button></div>';
+  h+='<div class="dmove"><span>'+(isToday?'Did this last night?':'Wrong day?')+'</span>'+
+     '<button class="dmovebtn" id="dmPrev" type="button">⟵ Move to '+esc(fmtShort(prev))+'</button>'+
+     (canNext?'<button class="dmovebtn" id="dmNext" type="button">Move to '+esc(fmtShort(next))+' ⟶</button>':'')+
+     (isToday?'':'<button class="dmovebtn ghost" id="dmToday" type="button">Today</button>')+'</div>';
+  w.innerHTML=h;
+  document.getElementById("dnPrev").onclick=()=>gotoDay(prev);
+  const nx=document.getElementById("dnNext"); if(nx&&canNext)nx.onclick=()=>gotoDay(next);
+  const mp=document.getElementById("dmPrev"); if(mp)mp.onclick=()=>moveSession(-1);
+  const mn=document.getElementById("dmNext"); if(mn)mn.onclick=()=>moveSession(1);
+  const jt=document.getElementById("dmToday"); if(jt)jt.onclick=()=>gotoDay(t);
+}
 function renderSessionBar(){
   const bar=document.getElementById("sessionBar"); if(!bar)return;
   let h="";
@@ -1081,10 +1141,10 @@ function renderExList(){
 function refreshChecks(){const exs=dayEx(S.workout);document.querySelectorAll("#exList .ex").forEach((el,i)=>{const ex=exs[i];if(!ex)return;const s=S.sets[ex.id];el.classList.toggle("done",!!(s&&s.some(v=>+v>0)));});}
 function renderCreatine(){document.getElementById("creatineToggle").classList.toggle("on",entry.creatine);}
 function renderFinish(){const b=document.getElementById("finishBtn");b.classList.toggle("done",S.done);b.textContent=S.done?"✓ SESSION LOGGED":(entry.sessions.length>1?"LOG THIS SESSION":"LOG TONIGHT'S WORK");}
-function renderToday(){const wl=document.getElementById("whoLine");if(wl)wl.textContent=(PROFILE.name||(ME?ME.name:""))+(PROFILE.height?" · "+PROFILE.height:"")+(PROFILE.weight?" · "+PROFILE.weight:"");document.getElementById("todayDate").textContent=fmtNice(currentDate);renderSessionBar();renderDaySwitch();renderExList();renderRing();renderCreatine();renderFinish();updateStreakLine();}
+function renderToday(){const wl=document.getElementById("whoLine");if(wl)wl.textContent=(PROFILE.name||(ME?ME.name:""))+(PROFILE.height?" · "+PROFILE.height:"")+(PROFILE.weight?" · "+PROFILE.weight:"");document.getElementById("todayDate").textContent=fmtNice(currentDate);renderDayNav();renderSessionBar();renderDaySwitch();renderExList();renderRing();renderCreatine();renderFinish();updateStreakLine();}
 
 function dayLogged(k){const e=DB[k];if(!e)return false;return normalizeEntry(e).sessions.some(sessLogged);}
-function computeStreak(){let d=new Date(Date.now()-DAY_CUTOFF_H*3600*1000);if(!dayLogged(ymd(d)))d.setDate(d.getDate()-1);let s=0;for(;;){if(dayLogged(ymd(d))){s++;d.setDate(d.getDate()-1);}else break;}return s;}
+function computeStreak(){let d=today();if(!dayLogged(d))d=shiftYmd(d,-1);let s=0;while(dayLogged(d)){s++;d=shiftYmd(d,-1);}return s;}
 function updateStreakLine(){const s=computeStreak();const el=document.getElementById("streakLine");const lg=dayLogged(currentDate);el.textContent=lg?("🔥 "+s+"-day streak — locked in."):(s>0?("🔥 "+s+"-day streak going. Log tonight to keep it alive."):"Log a session to start your streak.");}
 
 document.getElementById("creatineToggle").onclick=()=>{entry.creatine=!entry.creatine;persist(currentDate);renderCreatine();};
@@ -1144,7 +1204,7 @@ async function renderCrew(){
     const nameOf={}; (profs||[]).forEach(p=>{if(p.name)nameOf[p.user_id]=p.name;});
     const acc={}; Object.keys(USERS).forEach(c=>{const u=USERS[c];acc[u.id]={id:u.id,name:nameOf[u.id]||u.name,days:new Set(),reps:0};});
     (logs||[]).forEach(r=>{const u=acc[r.user_id]; if(!u)return; const p=normalizeEntry(r.payload); let logged=false; p.sessions.forEach(s=>{u.reps+=sessReps(s); if(sessLogged(s))logged=true;}); if(logged)u.days.add(r.log_date);});
-    const streakFromDates=set=>{let d=new Date(Date.now()-DAY_CUTOFF_H*3600*1000);if(!set.has(ymd(d)))d.setDate(d.getDate()-1);let n=0;for(;;){if(set.has(ymd(d))){n++;d.setDate(d.getDate()-1);}else break;}return n;};
+    const streakFromDates=set=>{let d=today();if(!set.has(d))d=shiftYmd(d,-1);let n=0;while(set.has(d)){n++;d=shiftYmd(d,-1);}return n;};
     const rows=Object.keys(acc).map(k=>{const u=acc[k];const ds=[...u.days];return{id:u.id,name:u.name,reps:u.reps,streak:streakFromDates(u.days),wk:ds.filter(d=>d>=ws&&d<=we).length,mo:ds.filter(d=>d.slice(0,7)===moPre).length,yr:ds.filter(d=>d.slice(0,4)===yrPre).length};});
     rows.sort((a,b)=>b.wk-a.wk||b.reps-a.reps);
     const active=rows.some(r=>r.wk>0);
@@ -1220,8 +1280,8 @@ async function pullResist(){if(!cloud)return;try{const {data}=await sb.from(T_RE
 async function logResist(item,cals,sugar,won){const row={item:String(item||"Snack"),cals:Math.max(0,Math.round(+cals||0)),sugar:Math.max(0,Math.round((+sugar||0)*10)/10),won:won!==false,ts:Date.now()};RESIST.push(row);saveResistLocal();renderResist();if(cloud){try{await sb.from(T_RESIST).insert({user_id:ME.id,item:row.item,cals:row.cals,sugar:row.sugar,won:row.won});}catch(e){console.warn("resist insert",e);}}}
 function fmtLbs(c){const v=c/3500;return v<1?v.toFixed(2):v.toFixed(1);}
 function resistWins(){return RESIST.filter(r=>r.won!==false);}
-function rday(r){return ymd(new Date(r.ts-DAY_CUTOFF_H*3600*1000));}
-function resistStreak(){const days={};resistWins().forEach(r=>{days[rday(r)]=1;});let d=new Date(Date.now()-DAY_CUTOFF_H*3600*1000);if(!days[ymd(d)])d.setDate(d.getDate()-1);let n=0;for(;;){if(days[ymd(d)]){n++;d.setDate(d.getDate()-1);}else break;}return n;}
+function rday(r){return ymdTZ(new Date(r.ts-DAY_CUTOFF_H*3600*1000));}
+function resistStreak(){const days={};resistWins().forEach(r=>{days[rday(r)]=1;});let d=today();if(!days[d])d=shiftYmd(d,-1);let n=0;while(days[d]){n++;d=shiftYmd(d,-1);}return n;}
 function renderResist(){
   const tally=document.getElementById("resistTally"); if(!tally)return;
   const [ws,we]=weekRange();
@@ -1343,7 +1403,7 @@ const FOODS=[
  {name:"String cheese",emoji:"🧀",p:7,c:1,cal:80,cat:"dairy"}
 ];
 const FOOD_CATS=[["shake","🥤 Protein"],["meat","🍗 Meat"],["fruit","🍎 Fruit"],["veg","🥦 Veg"],["carb","🍚 Carbs"],["dairy","🥛 Dairy"]];
-let FOOD=[], foodCat="shake";
+let FOOD=[], foodCat="shake", foodSel=null, foodQty=1;
 function foodKey(){return "nightlift_food_"+(ME?ME.id:"anon");}
 function goalKey(){return "nightlift_goals_"+(ME?ME.id:"anon");}
 function loadFood(){try{FOOD=JSON.parse(store.get(foodKey()))||[];}catch(e){FOOD=[];}}
@@ -1374,13 +1434,41 @@ function renderFood(){
   if(cats&&!cats.dataset.filled){cats.innerHTML=FOOD_CATS.map(c=>'<button class="segb" type="button" data-c="'+c[0]+'">'+c[1]+'</button>').join('');cats.dataset.filled="1";cats.querySelectorAll(".segb").forEach(b=>b.onclick=()=>{foodCat=b.dataset.c;cats.querySelectorAll(".segb").forEach(x=>x.classList.toggle("on",x.dataset.c===foodCat));renderFoodGrid();});}
   if(cats)cats.querySelectorAll(".segb").forEach(x=>x.classList.toggle("on",x.dataset.c===foodCat));
   renderFoodGrid();
+  renderFoodEdit();
   const ma=document.getElementById("mfAdd");
   if(ma&&!ma.dataset.b){ma.dataset.b="1";ma.onclick=()=>{const p=+document.getElementById("mfP").value||0,c=+document.getElementById("mfC").value||0,cal=+document.getElementById("mfCal").value||0,nm=document.getElementById("mfName").value.trim();if(p<=0&&c<=0&&cal<=0)return;logFood(nm||"Manual entry",p,c,cal);document.getElementById("mfName").value="";document.getElementById("mfP").value="";document.getElementById("mfC").value="";document.getElementById("mfCal").value="";};}
   const lf=document.getElementById("labelFile");
   if(lf&&!lf.dataset.b){lf.dataset.b="1";lf.onchange=()=>{if(lf.files&&lf.files[0])runLabelOCR(lf.files[0]);};}
   renderFoodHistory();
 }
-function renderFoodGrid(){const grid=document.getElementById("foodGrid");if(!grid)return;grid.innerHTML=FOODS.map((f,i)=>({f,i})).filter(o=>o.f.cat===foodCat).map(o=>'<button class="cravetile" type="button" data-i="'+o.i+'"><span class="ce">'+o.f.emoji+'</span><span class="cn">'+esc(o.f.name)+'</span><small>P'+o.f.p+' · C'+o.f.c+'</small></button>').join('');grid.querySelectorAll(".cravetile").forEach(b=>b.onclick=()=>{const f=FOODS[+b.dataset.i];logFood(f.name,f.p,f.c,f.cal);b.classList.add("tapped");setTimeout(()=>b.classList.remove("tapped"),300);});}
+function renderFoodGrid(){const grid=document.getElementById("foodGrid");if(!grid)return;grid.innerHTML=FOODS.map((f,i)=>({f,i})).filter(o=>o.f.cat===foodCat).map(o=>'<button class="cravetile'+(o.i===foodSel?' sel':'')+'" type="button" data-i="'+o.i+'"><span class="ce">'+o.f.emoji+'</span><span class="cn">'+esc(o.f.name)+'</span><small>P'+o.f.p+' · C'+o.f.c+'</small></button>').join('');grid.querySelectorAll(".cravetile").forEach(b=>b.onclick=()=>openFoodEdit(+b.dataset.i));}
+function openFoodEdit(i){foodSel=i;foodQty=1;renderFoodGrid();renderFoodEdit();const fe=document.getElementById("foodEdit");if(fe)fe.scrollIntoView({behavior:"smooth",block:"nearest"});}
+function closeFoodEdit(){foodSel=null;renderFoodGrid();renderFoodEdit();}
+function fePer(){return {p:+(document.getElementById("feP")||{}).value||0,c:+(document.getElementById("feC")||{}).value||0,cal:+(document.getElementById("feCal")||{}).value||0};}
+function feUpdateTotal(){const per=fePer(),t=document.getElementById("feTotal");if(t)t.innerHTML='Adds <b>'+Math.round(per.p*foodQty)+'</b> g protein · <b>'+Math.round(per.c*foodQty)+'</b> g carbs'+(per.cal?' · '+Math.round(per.cal*foodQty)+' cal':'');const q=document.getElementById("feQty");if(q)q.textContent=foodQty;}
+function renderFoodEdit(){
+  const fe=document.getElementById("foodEdit"); if(!fe)return;
+  if(foodSel==null||!FOODS[foodSel]){fe.classList.add("hide");fe.innerHTML="";return;}
+  const f=FOODS[foodSel];
+  fe.classList.remove("hide");
+  fe.innerHTML=
+    '<div class="fehead"><span>'+f.emoji+' Adjust &amp; add</span><button class="fex" id="feClose" type="button" aria-label="Close">✕</button></div>'+
+    '<input id="feName" type="text" value="'+esc(f.name)+'" autocomplete="off">'+
+    '<div class="mfrow">'+
+      '<div class="mffield"><label>Protein (g)</label><input id="feP" type="number" inputmode="decimal" min="0" value="'+f.p+'"></div>'+
+      '<div class="mffield"><label>Carbs (g)</label><input id="feC" type="number" inputmode="decimal" min="0" value="'+f.c+'"></div>'+
+      '<div class="mffield"><label>Calories</label><input id="feCal" type="number" inputmode="numeric" min="0" value="'+f.cal+'"></div>'+
+    '</div>'+
+    '<div class="feqty"><label>Servings</label><div class="qstep"><button id="feMinus" type="button">–</button><span id="feQty">1</span><button id="fePlus" type="button">+</button></div></div>'+
+    '<div class="fetotal" id="feTotal"></div>'+
+    '<button id="feAdd" class="finish" type="button">Add to today</button>';
+  document.getElementById("feClose").onclick=closeFoodEdit;
+  document.getElementById("feMinus").onclick=()=>{foodQty=Math.max(1,foodQty-1);feUpdateTotal();};
+  document.getElementById("fePlus").onclick=()=>{foodQty=Math.min(20,foodQty+1);feUpdateTotal();};
+  ["feP","feC","feCal"].forEach(id=>{const el=document.getElementById(id);if(el)el.oninput=feUpdateTotal;});
+  document.getElementById("feAdd").onclick=()=>{const per=fePer();if(per.p<=0&&per.c<=0&&per.cal<=0)return;const nm=(document.getElementById("feName").value||"").trim()||f.name;logFood(nm+(foodQty>1?" ×"+foodQty:""),per.p*foodQty,per.c*foodQty,per.cal*foodQty);closeFoodEdit();};
+  feUpdateTotal();
+}
 function renderFoodHistory(){const h=document.getElementById("foodHistory");if(!h)return;const rows=foodToday().rows.slice().reverse();h.innerHTML=rows.length?rows.map(r=>'<div class="rrow"><span>'+esc(r.item)+'</span><span class="rmeta">P'+Math.round(r.p)+' · C'+Math.round(r.c)+(r.cal?' · '+Math.round(r.cal)+'cal':'')+' <button class="xdel" type="button" data-ts="'+r.ts+'">✕</button></span></div>').join(''):'<p class="note">Nothing logged today yet. Tap a food above, enter it manually, or scan a label.</p>';h.querySelectorAll(".xdel").forEach(b=>b.onclick=()=>{const row=FOOD.find(r=>r.ts===+b.dataset.ts);if(row)delFood(row);});}
 /* label OCR — fully client-side, lazy-loaded, best-effort */
 function loadTesseract(){return new Promise((res,rej)=>{if(window.Tesseract)return res();const s=document.createElement('script');s.src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js";s.onload=()=>res();s.onerror=()=>rej(new Error("load failed"));document.head.appendChild(s);});}
@@ -1427,7 +1515,7 @@ document.getElementById("resetBtn").onclick=async()=>{
 };
 
 /* ===================== tabs ===================== */
-document.querySelectorAll("nav.tabs button").forEach(btn=>{btn.onclick=()=>{if(typeof clearSurf==="function")clearSurf();document.querySelectorAll("nav.tabs button").forEach(b=>b.classList.remove("on"));btn.classList.add("on");const v=btn.dataset.view;["today","progress","guide","crew","resist","food"].forEach(id=>document.getElementById("view-"+id).classList.toggle("hide",id!==v));if(v==="progress")renderProgress();if(v==="crew")renderCrew();if(v==="resist")renderResist();if(v==="food")renderFood();window.scrollTo({top:0,behavior:"smooth"});};});
+document.querySelectorAll("nav.tabs button").forEach(btn=>{btn.onclick=()=>{if(typeof clearSurf==="function")clearSurf();document.querySelectorAll("nav.tabs button").forEach(b=>b.classList.remove("on"));btn.classList.add("on");const v=btn.dataset.view;["today","progress","guide","crew","resist","food"].forEach(id=>document.getElementById("view-"+id).classList.toggle("hide",id!==v));if(v==="today"){openDay();renderToday();}if(v==="progress")renderProgress();if(v==="crew")renderCrew();if(v==="resist")renderResist();if(v==="food")renderFood();window.scrollTo({top:0,behavior:"smooth"});};});
 
 /* crew controls */
 function renderGear(){const g=document.getElementById("gearTips");if(!g)return;g.innerHTML=gearAdvice().map(t=>'<p class="note" style="margin-top:8px">• '+t+'</p>').join('');}
