@@ -122,3 +122,7 @@ The 4am rule only helps if you log *during* the midnight–4am window. If you tr
 ## Timezone of the 4am cutoff
 
 The logical day (and the 4am rollover) is now pinned to **Mountain time (`America/Denver`)**, not the device’s timezone — so the day a workout counts toward is identical whether you open the app at home or while traveling. This anchors `today()`, both workout/crew streaks, and the resist-day mapping. `America/Denver` follows daylight saving (MST in winter, MDT in summer), so the cutoff is always 4am by the Mountain wall clock. If you actually want fixed MST year-round (Arizona, no DST), change the single constant `APP_TZ` to `America/Phoenix`.
+
+## Recent foods (one-tap re-log)
+
+The Food tab now opens on a **🕘 Recent** category: every distinct item you’ve logged in the last 7 days, each showing the exact protein/carbs/calories you saved and an **×N count** of how many times you’ve had it. Tapping re-logs it instantly with those numbers — no editor, no re-typing. Items you adjusted (edited macros or a servings multiplier) are kept as their own distinct recent entry, so your dialed-in versions are one tap away. Empty until you’ve logged something. Also added **Beef stick** (P9·C1·100) to Snacks.

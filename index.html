@@ -299,6 +299,8 @@
   .xdel{background:none;border:none;color:var(--faint);font-size:13px;cursor:pointer;padding:2px 4px;margin-left:6px}
   .cravetile.tapped{outline:2px solid var(--good);transform:scale(.97)}
   .cravetile.sel{outline:2px solid var(--ember);background:rgba(255,106,61,.12)}
+  .cravetile{position:relative}
+  .rcount{position:absolute;top:5px;right:6px;background:var(--ember);color:#1a0f08;font-family:'Anton';font-size:11px;line-height:1;padding:2px 5px;border-radius:999px}
   .foodedit{background:var(--panel-2);border:1px solid var(--ember);border-radius:14px;padding:13px;margin-bottom:14px}
   .fehead{display:flex;justify-content:space-between;align-items:center;font-weight:800;font-size:14px;color:var(--ink);margin-bottom:9px}
   .fex{background:none;border:none;color:var(--faint);font-size:16px;cursor:pointer;padding:2px 6px}
@@ -1420,13 +1422,18 @@ const FOODS=[
  {name:"Cheese (1 oz)",emoji:"🧀",p:7,c:1,cal:110,cat:"dairy"},
  {name:"String cheese",emoji:"🧀",p:7,c:1,cal:80,cat:"dairy"},
  /* snacks */
+ {name:"Beef stick",emoji:"🥩",p:9,c:1,cal:100,cat:"snack"},
  {name:"Trail mix (¼ cup)",emoji:"🥜",p:6,c:10,cal:170,cat:"snack"},
  {name:"Rice cake",emoji:"🍘",p:1,c:7,cal:35,cat:"snack"},
  {name:"Rice cake + PB (thin)",emoji:"🍘",p:2,c:8,cal:70,cat:"snack"},
  {name:"Rice cake + PB (1 Tbsp)",emoji:"🍘",p:5,c:11,cal:130,cat:"snack"}
 ];
-const FOOD_CATS=[["shake","🥤 Protein"],["meat","🍗 Meat & eggs"],["fruit","🍎 Fruit"],["veg","🥦 Veg"],["carb","🍚 Carbs"],["dairy","🥛 Dairy"],["snack","🥨 Snacks"]];
-let FOOD=[], foodCat="shake", foodSel=null, foodQty=1;
+const FOOD_CATS=[["recent","🕘 Recent"],["shake","🥤 Protein"],["meat","🍗 Meat & eggs"],["fruit","🍎 Fruit"],["veg","🥦 Veg"],["carb","🍚 Carbs"],["dairy","🥛 Dairy"],["snack","🥨 Snacks"]];
+const RECENT_DAYS=7;
+const _emojiByName={}; FOODS.forEach(f=>{_emojiByName[f.name]=f.emoji;});
+function emojiFor(name){if(_emojiByName[name])return _emojiByName[name];const base=String(name||"").replace(/\s*×\d+$/,"");return _emojiByName[base]||"🍽️";}
+function recentFoods(){const cutoff=shiftYmd(today(),-(RECENT_DAYS-1));const map=new Map();FOOD.forEach(r=>{if(!r.date||r.date<cutoff)return;const key=r.item+"|"+r.p+"|"+r.c+"|"+r.cal;const e=map.get(key);if(e){e.count++;if(r.ts>e.ts)e.ts=r.ts;}else map.set(key,{item:r.item,p:r.p,c:r.c,cal:r.cal,count:1,ts:r.ts});});return [...map.values()].sort((a,b)=>b.ts-a.ts).slice(0,18);}
+let FOOD=[], foodCat="recent", foodSel=null, foodQty=1;
 function foodKey(){return "nightlift_food_"+(ME?ME.id:"anon");}
 function goalKey(){return "nightlift_goals_"+(ME?ME.id:"anon");}
 function loadFood(){try{FOOD=JSON.parse(store.get(foodKey()))||[];}catch(e){FOOD=[];}}
@@ -1465,7 +1472,9 @@ function renderFood(){
   if(lf&&!lf.dataset.b){lf.dataset.b="1";lf.onchange=()=>{if(lf.files&&lf.files[0])runLabelOCR(lf.files[0]);};}
   renderFoodHistory();
 }
-function renderFoodGrid(){const grid=document.getElementById("foodGrid");if(!grid)return;grid.innerHTML=FOODS.map((f,i)=>({f,i})).filter(o=>o.f.cat===foodCat).map(o=>'<button class="cravetile'+(o.i===foodSel?' sel':'')+'" type="button" data-i="'+o.i+'"><span class="ce">'+o.f.emoji+'</span><span class="cn">'+esc(o.f.name)+'</span><small>P'+o.f.p+' · C'+o.f.c+'</small></button>').join('');grid.querySelectorAll(".cravetile").forEach(b=>b.onclick=()=>openFoodEdit(+b.dataset.i));}
+function renderFoodGrid(){const grid=document.getElementById("foodGrid");if(!grid)return;
+  if(foodCat==="recent"){const items=recentFoods();if(!items.length){grid.innerHTML='<p class="note" style="grid-column:1/-1">Nothing logged in the last '+RECENT_DAYS+' days yet. Foods you log show up here so you can re-add them — with your adjusted numbers — in one tap.</p>';return;}grid.innerHTML=items.map((f,i)=>'<button class="cravetile" type="button" data-r="'+i+'">'+(f.count>1?'<span class="rcount">×'+f.count+'</span>':'')+'<span class="ce">'+emojiFor(f.item)+'</span><span class="cn">'+esc(f.item)+'</span><small>P'+Math.round(f.p)+' · C'+Math.round(f.c)+(f.cal?' · '+Math.round(f.cal)+'cal':'')+'</small></button>').join('');grid.querySelectorAll(".cravetile").forEach(b=>{const f=items[+b.dataset.r];b.onclick=()=>{logFood(f.item,f.p,f.c,f.cal);b.classList.add("tapped");setTimeout(()=>b.classList.remove("tapped"),300);};});return;}
+  grid.innerHTML=FOODS.map((f,i)=>({f,i})).filter(o=>o.f.cat===foodCat).map(o=>'<button class="cravetile'+(o.i===foodSel?' sel':'')+'" type="button" data-i="'+o.i+'"><span class="ce">'+o.f.emoji+'</span><span class="cn">'+esc(o.f.name)+'</span><small>P'+o.f.p+' · C'+o.f.c+'</small></button>').join('');grid.querySelectorAll(".cravetile").forEach(b=>b.onclick=()=>openFoodEdit(+b.dataset.i));}
 function openFoodEdit(i){foodSel=i;foodQty=1;renderFoodGrid();renderFoodEdit();const fe=document.getElementById("foodEdit");if(fe)fe.scrollIntoView({behavior:"smooth",block:"nearest"});}
 function closeFoodEdit(){foodSel=null;renderFoodGrid();renderFoodEdit();}
 function fePer(){return {p:+(document.getElementById("feP")||{}).value||0,c:+(document.getElementById("feC")||{}).value||0,cal:+(document.getElementById("feCal")||{}).value||0};}
