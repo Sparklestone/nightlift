@@ -284,6 +284,10 @@
   .macrotop{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em}
   .macrotop b{font-family:'Anton';font-size:22px;color:var(--ink);letter-spacing:0;font-weight:400}
   .macrotop small{color:var(--faint);font-size:13px;font-family:'Hanken Grotesk'}
+  .macrotop em{font-style:normal;font-size:9px;letter-spacing:.08em;color:var(--faint);border:1px solid var(--line);border-radius:4px;padding:1px 4px;margin-left:3px}
+  .undernote{font-size:10px;color:var(--good);margin-top:5px;text-transform:uppercase;letter-spacing:.03em}
+  .undernote b{font-family:'Anton';font-size:13px}
+  .undernote.over{color:var(--ember)}
   .mtrack{height:10px;border-radius:6px;background:var(--panel-2);overflow:hidden;border:1px solid var(--line)}
   .mfill{height:100%;border-radius:6px;transition:width .35s}
   .mfrow{display:flex;gap:8px;margin:10px 0}
@@ -1414,15 +1418,20 @@ const FOODS=[
  {name:"Cottage cheese (1 cup)",emoji:"🧀",p:25,c:8,cal:180,cat:"dairy"},
  {name:"Milk (1 cup)",emoji:"🥛",p:8,c:12,cal:120,cat:"dairy"},
  {name:"Cheese (1 oz)",emoji:"🧀",p:7,c:1,cal:110,cat:"dairy"},
- {name:"String cheese",emoji:"🧀",p:7,c:1,cal:80,cat:"dairy"}
+ {name:"String cheese",emoji:"🧀",p:7,c:1,cal:80,cat:"dairy"},
+ /* snacks */
+ {name:"Trail mix (¼ cup)",emoji:"🥜",p:6,c:10,cal:170,cat:"snack"},
+ {name:"Rice cake",emoji:"🍘",p:1,c:7,cal:35,cat:"snack"},
+ {name:"Rice cake + PB (thin)",emoji:"🍘",p:2,c:8,cal:70,cat:"snack"},
+ {name:"Rice cake + PB (1 Tbsp)",emoji:"🍘",p:5,c:11,cal:130,cat:"snack"}
 ];
-const FOOD_CATS=[["shake","🥤 Protein"],["meat","🍗 Meat & eggs"],["fruit","🍎 Fruit"],["veg","🥦 Veg"],["carb","🍚 Carbs"],["dairy","🥛 Dairy"]];
+const FOOD_CATS=[["shake","🥤 Protein"],["meat","🍗 Meat & eggs"],["fruit","🍎 Fruit"],["veg","🥦 Veg"],["carb","🍚 Carbs"],["dairy","🥛 Dairy"],["snack","🥨 Snacks"]];
 let FOOD=[], foodCat="shake", foodSel=null, foodQty=1;
 function foodKey(){return "nightlift_food_"+(ME?ME.id:"anon");}
 function goalKey(){return "nightlift_goals_"+(ME?ME.id:"anon");}
 function loadFood(){try{FOOD=JSON.parse(store.get(foodKey()))||[];}catch(e){FOOD=[];}}
 function saveFoodLocal(){try{store.set(foodKey(),JSON.stringify(FOOD.slice(-1500)));}catch(e){}}
-function foodGoals(){let g=null;try{g=JSON.parse(store.get(goalKey()));}catch(e){}if(!g||typeof g.p!=="number"){const w=parseInt(PROFILE.weight)||0;g={p:w?Math.round(w*0.9):160,c:200};}return g;}
+function foodGoals(){let g=null;try{g=JSON.parse(store.get(goalKey()));}catch(e){}const w=parseInt(PROFILE.weight)||0;if(!g||typeof g.p!=="number")g={p:w?Math.round(w*0.9):160,c:200,cal:w?Math.round(w*12.5):2300};if(typeof g.cal!=="number")g.cal=w?Math.round(w*12.5):2300;return g;}
 function saveGoals(g){try{store.set(goalKey(),JSON.stringify(g));}catch(e){}}
 function foodToday(){const t=today();const rows=FOOD.filter(r=>r.date===t);return {p:rows.reduce((a,r)=>a+(+r.p||0),0),c:rows.reduce((a,r)=>a+(+r.c||0),0),cal:rows.reduce((a,r)=>a+(+r.cal||0),0),rows:rows};}
 async function pullFood(){if(!cloud)return;try{const {data}=await sb.from(T_FOOD).select("id,item,protein,carbs,cals,log_date,created_at").eq("user_id",ME.id).order("created_at",{ascending:true}).limit(2000);if(data){FOOD=data.map(r=>({id:r.id,item:r.item,p:+r.protein||0,c:+r.carbs||0,cal:+r.cals||0,date:r.log_date,ts:Date.parse(r.created_at)||Date.now()}));saveFoodLocal();const v=document.getElementById("view-food");if(v&&!v.classList.contains("hide"))renderFood();}}catch(e){console.warn("food pull",e);}}
@@ -1434,12 +1443,13 @@ async function logFood(item,p,c,cal){
   if(cloud){try{const {data}=await sb.from(T_FOOD).insert({user_id:ME.id,log_date:row.date,item:row.item,protein:row.p,carbs:row.c,cals:row.cal}).select("id").single();if(data&&data.id){row.id=data.id;saveFoodLocal();}}catch(e){console.warn("food insert",e);}}
 }
 async function delFood(row){FOOD=FOOD.filter(r=>r!==row);saveFoodLocal();renderFood();if(cloud&&row.id){try{await sb.from(T_FOOD).delete().eq("id",row.id);}catch(e){console.warn("food del",e);}}}
-function editGoals(){const g=foodGoals();const p=prompt("Daily protein goal (grams):",g.p);if(p===null)return;const c=prompt("Daily carb goal (grams):",g.c);if(c===null)return;saveGoals({p:Math.max(0,parseInt(p)||g.p),c:Math.max(0,parseInt(c)||g.c)});renderFood();}
+function editGoals(){const g=foodGoals();const p=prompt("Daily protein goal (grams):",g.p);if(p===null)return;const c=prompt("Daily carb goal (grams):",g.c);if(c===null)return;const cal=prompt("Daily calorie cap — stay under (calories):",g.cal);if(cal===null)return;saveGoals({p:Math.max(0,parseInt(p)||g.p),c:Math.max(0,parseInt(c)||g.c),cal:Math.max(0,parseInt(cal)||g.cal)});renderFood();}
 function renderFood(){
   const tally=document.getElementById("foodTally"); if(!tally)return;
   const g=foodGoals(), tot=foodToday();
   const bar=(val,goal,color,label)=>{const pct=goal>0?Math.min(100,Math.round(val/goal*100)):0;return '<div class="macro"><div class="macrotop"><span>'+label+'</span><b>'+Math.round(val)+'<small>/'+goal+' g</small></b></div><div class="mtrack"><div class="mfill" style="width:'+pct+'%;background:'+color+'"></div></div></div>';};
-  tally.innerHTML=bar(tot.p,g.p,'var(--ember)','Protein')+bar(tot.c,g.c,'var(--gold)','Carbs')+'<div class="rlb" style="margin-top:8px">≈<b>'+Math.round(tot.cal).toLocaleString()+'</b> calories logged today · <b>'+tot.rows.length+'</b> item'+(tot.rows.length===1?'':'s')+'</div>';
+  const barUnder=(val,cap,label)=>{const v=Math.round(val);const pct=cap>0?Math.min(100,Math.round(v/cap*100)):0;const over=v>cap;const diff=Math.abs(cap-v);return '<div class="macro"><div class="macrotop"><span>'+label+' <em>cap</em></span><b>'+v.toLocaleString()+'<small>/'+(+cap).toLocaleString()+'</small></b></div><div class="mtrack"><div class="mfill" style="width:'+pct+'%;background:'+(over?'var(--ember)':'var(--good)')+'"></div></div><div class="undernote'+(over?' over':'')+'">'+(over?('<b>'+diff.toLocaleString()+'</b> over your cap — ease up tomorrow'):('<b>'+diff.toLocaleString()+'</b> cal headroom left today'))+'</div></div>';};
+  tally.innerHTML=bar(tot.p,g.p,'var(--ember)','Protein')+bar(tot.c,g.c,'var(--gold)','Carbs')+barUnder(tot.cal,g.cal,'Calories')+'<div class="rlb" style="margin-top:4px"><b>'+tot.rows.length+'</b> item'+(tot.rows.length===1?'':'s')+' logged today</div>';
   const note=document.getElementById("foodGoalNote");
   if(note){const left=Math.max(0,Math.round(g.p-tot.p));note.innerHTML=(left>0?('<b style="color:var(--ember)">'+left+' g protein</b> to go today. '):'<b style="color:var(--good)">Protein goal hit. 💪</b> ')+'<a id="editGoals" style="color:var(--gold);text-decoration:underline;cursor:pointer">Edit goals</a>';const eg=document.getElementById("editGoals");if(eg)eg.onclick=editGoals;}
   const ft=document.getElementById("foodEntryTabs");

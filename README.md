@@ -106,7 +106,7 @@ A new **Food** tab tracks daily protein and carbs against goals.
 - **Common foods** — catalog of staples across Protein/shakes, Meat, Fruit, Veg, Carbs, and Dairy. Tapping one opens a quick editor pre-filled with that food’s protein/carbs/calories so you can **adjust the numbers before logging** (brands differ — e.g. one yogurt’s protein vs another) and pick a **servings** multiplier (×1–20, with a live total). You can also rename it to your brand.
 - **Manual** — type protein, carbs, and (optional) calories for anything not in the list.
 - **Scan label** — snap the Nutrition Facts panel; on-device OCR (Tesseract.js, lazy-loaded from CDN, fully client-side, no API key) reads protein/carbs/calories. Always shown for you to confirm/correct before saving; if OCR can’t read it, you just type the numbers.
-- **Goals** — protein defaults to ≈0.9 g per lb of bodyweight (≈171 g at 190 lb), carbs default 200 g; both editable via “Edit goals”. Stored per device.
+- **Goals** — three daily bars: protein (≈0.9 g/lb, a target to hit), carbs (a target to hit), and a **calorie cap** (a ceiling to stay *under*, default ≈12.5×bodyweight). The calorie bar shows headroom left while you’re under and flips to a warning when you go over. All three editable via “Edit goals”; stored per device.
 - Daily totals reset on the 4am logical-day boundary like everything else; entries sync to Supabase (`nightlift_food`) and cache locally. Tap ✕ on any entry to remove it.
 
 New table `nightlift_food` (RLS on, anon policy) was migrated automatically.
