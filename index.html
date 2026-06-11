@@ -204,9 +204,13 @@
   .crewrow:last-child{border-bottom:none}
   .crewrow.me{background:rgba(255,106,61,.06);border-radius:10px;padding:13px 10px}
   .crewrank{font-family:'Anton';font-size:26px;width:38px;text-align:center;color:var(--gold)}
-  .crewname{flex:1;font-weight:700;font-size:16px;line-height:1.25}
-  .crewstat{font-size:12px;color:var(--muted);text-align:right;line-height:1.3}
-  .crewstat b{color:var(--ember);font-family:'Anton';font-size:20px}
+  .crewname{font-weight:700;font-size:16px;line-height:1.25}
+  .crewbody{flex:1;min-width:0}
+  .crewmini{display:flex;gap:13px;margin-top:6px;flex-wrap:wrap}
+  .crewmini span{display:flex;flex-direction:column;font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;line-height:1.15}
+  .crewmini b{font-family:'Anton';font-size:17px;color:var(--ink);letter-spacing:0;font-weight:400}
+  .crewmini span:first-child b{color:var(--ember)}
+  .crewmini span:last-child b{color:var(--gold)}
   .composer{display:flex;flex-direction:column;gap:9px;margin-top:10px}
   .seg{display:flex;gap:6px}
   .seg button{flex:1;background:var(--panel-2);border:1px solid var(--line);color:var(--muted);font-family:inherit;font-weight:700;font-size:14px;padding:10px;border-radius:10px;cursor:pointer}
@@ -263,6 +267,13 @@
   .surfbg{fill:none;stroke:var(--line);stroke-width:5}
   .surffg{fill:none;stroke:var(--ember);stroke-width:5;stroke-linecap:round;stroke-dasharray:201;stroke-dashoffset:201;transition:stroke-dashoffset 1s linear}
   .surftime{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Anton';font-size:32px;color:var(--ink)}
+  .stall{margin-top:12px;border:1px solid var(--gold);background:rgba(214,178,92,.08);border-radius:12px;padding:11px 13px;font-size:14px;color:var(--ink);line-height:1.45}
+  .stall b{color:var(--gold)}
+  .stallbtns{display:flex;gap:8px;margin-top:10px}
+  .stallgo,.stallkeep{flex:1;font-family:inherit;font-weight:700;font-size:14px;padding:9px;border-radius:10px;cursor:pointer}
+  .stallgo{background:var(--gold);border:1px solid var(--gold);color:#1a1407}
+  .stallkeep{background:var(--panel-2);border:1px solid var(--line);color:var(--muted)}
+  .ex.stalled{border-color:rgba(214,178,92,.5)}
 </style>
 </head>
 <body>
@@ -395,7 +406,7 @@
     <div class="card">
       <span class="eyebrow">This week · the standings</span>
       <div id="crewBoard"></div>
-      <p class="note" style="margin-top:10px">👑 = most sessions this week. 🪣 = last place takes the <b>Tub-o-Shit</b>. Resets every Sunday — log sessions to climb (ties broken by total reps).</p>
+      <p class="note" style="margin-top:10px">👑 = most days trained this week. 🪣 = last place takes the <b>Tub-o-Shit</b>. Resets every Sunday — train more days to climb (ties broken by total reps).</p>
     </div>
     <div class="card">
       <span class="eyebrow">Talk trash · send love</span>
@@ -921,6 +932,13 @@ function ensure(date){const e=normalizeEntry(DB[date]);DB[date]=e;return e;}
 function allSessions(){const out=[];Object.keys(DB).forEach(d=>{normalizeEntry(DB[d]).sessions.forEach(s=>out.push({d,s}));});out.sort((a,b)=>a.d<b.d?-1:a.d>b.d?1:((a.s.ts||0)-(b.s.ts||0)));return out;}
 function sessReps(s){let t=0;Object.values(s.sets||{}).forEach(a=>a.forEach(v=>t+=(+v||0)));return t;}
 function sessLogged(s){return !!(s.done||Object.values(s.sets||{}).some(a=>a&&a.some(v=>+v>0)));}
+/* ---- plateau / stall detection (opt-in rotation) ---- */
+let STALL_DISMISS={};
+function stallKey(){return "nightlift_stall_"+(ME?ME.id:"anon");}
+function loadStall(){try{STALL_DISMISS=JSON.parse(store.get(stallKey()))||{};}catch(e){STALL_DISMISS={};}}
+function dismissStall(id){STALL_DISMISS[id]=Date.now();try{store.set(stallKey(),JSON.stringify(STALL_DISMISS));}catch(e){}renderToday();}
+function slotHistory(id){const L=(id[0]||"").toUpperCase();return allSessions().filter(x=>x.s.workout===L).map(x=>{const a=x.s.sets&&x.s.sets[id];const has=!!(a&&a.some(v=>+v>0));return{tot:has?a.reduce((t,v)=>t+(+v||0),0):0,has:has};}).filter(o=>o.has);}
+function isStalled(id){const dm=STALL_DISMISS[id]||0;if(Date.now()-dm<14*864e5)return false;const h=slotHistory(id);if(h.length<3)return false;const l=h.slice(-3).map(o=>o.tot);return Math.max(l[1],l[2])<=l[0];}
 function autoWorkout(){const dn=allSessions().filter(x=>x.s.done&&x.s.workout);if(!dn.length)return"A";const last=dn[dn.length-1].s.workout;return ORDER[(ORDER.indexOf(last)+1)%4];}
 let currentDate=today(), entry=ensure(currentDate), curSess=0, S=null;
 if(!entry.sessions.length) entry.sessions.push(newSession(autoWorkout()));
@@ -950,8 +968,9 @@ function renderExList(){
   exs.forEach(ex=>{
     const saved=S.sets[ex.id]||Array(ex.sets).fill("");
     const A=adapt(ex);
+    const stalled=!ex.replaced&&isStalled(ex.id);
     const isDone=saved.some(v=>+v>0);
-    const el=document.createElement("div");el.className="ex"+(isDone?" done":"");
+    const el=document.createElement("div");el.className="ex"+(isDone?" done":"")+(stalled?" stalled open":"");
     let sets="";
     for(let s=0;s<ex.sets;s++){
       const isLast=ex.amrap&&s===ex.sets-1;
@@ -960,7 +979,7 @@ function renderExList(){
     el.innerHTML=
       '<div class="ex-head">'+
         '<div class="ex-check">✓</div>'+
-        '<div class="ex-name"><div class="t">'+esc(ex.name)+(ex.star?'<span class="star">★ KEY</span>':'')+(ex.replaced?'<span class="star" style="color:var(--good)">⟳ SWAP</span>':'')+'</div><div class="m">'+esc(ex.musc)+' · '+ex.sets+' × '+esc(A.reps)+(A.note?' <span style="color:var(--faint)">'+esc(A.note)+'</span>':'')+'</div></div>'+
+        '<div class="ex-name"><div class="t">'+esc(ex.name)+(ex.star?'<span class="star">★ KEY</span>':'')+(ex.replaced?'<span class="star" style="color:var(--good)">⟳ SWAP</span>':'')+(stalled?'<span class="star" style="color:var(--gold)">⚠ PLATEAU</span>':'')+'</div><div class="m">'+esc(ex.musc)+' · '+ex.sets+' × '+esc(A.reps)+(A.note?' <span style="color:var(--faint)">'+esc(A.note)+'</span>':'')+'</div></div>'+
         '<div class="ex-load">'+esc(A.load).replace(/ /g,'&nbsp;')+'<small>LOAD</small></div>'+
         '<div class="chev">▶</div>'+
       '</div>'+
@@ -969,6 +988,7 @@ function renderExList(){
         ex.cues.map(c=>'<div class="cue">'+esc(c)+'</div>').join('')+
         (ex.tech?'<div class="tech"><b>Coach:</b> '+esc(ex.tech)+'</div>':'')+
         (ex.prog?'<div class="prog"><b>Level up:</b> '+esc(ex.prog)+'</div>':'')+
+        (stalled?'<div class="stall"><b>⚠ Plateau check.</b> This lift\u2019s looked flat about 3 sessions. Same exercise no longer adding reps usually means it\u2019s time for a 4–6 week rotation. <div class="stallbtns"><button class="stallgo" type="button">Rotate it</button><button class="stallkeep" type="button">Keep pushing it</button></div></div>':'')+
         '<div class="setrow">'+sets+'<span class="lg">grey = target · tap to log actual</span></div>'+
         '<div class="exbtns"><button class="ex-replace" type="button">↻ Replace</button>'+(ex.replaced?'<button class="ex-reset" type="button">Undo swap</button>':'')+'</div>'+
       '</div></div>';
@@ -981,6 +1001,8 @@ function renderExList(){
     };
     const rb=el.querySelector(".ex-replace"); if(rb) rb.onclick=ev=>{ev.stopPropagation();replaceExercise(ex,rb);};
     const rs=el.querySelector(".ex-reset"); if(rs) rs.onclick=ev=>{ev.stopPropagation();resetExercise(ex.id);};
+    const sg=el.querySelector(".stallgo"); if(sg) sg.onclick=ev=>{ev.stopPropagation();dismissStall(ex.id);replaceExercise(ex);};
+    const sk=el.querySelector(".stallkeep"); if(sk) sk.onclick=ev=>{ev.stopPropagation();dismissStall(ex.id);};
     list.appendChild(el);
   });
   list.querySelectorAll("input[data-ex]").forEach(inp=>{
@@ -1054,18 +1076,20 @@ async function renderCrew(){
   board.innerHTML='<p class="note">Loading…</p>';
   try{
     const [ws,we]=weekRange();
-    const {data:logs}=await sb.from(TABLE).select("user_id,payload").gte("log_date",ws).lte("log_date",we);
+    const tStr=today(); const moPre=tStr.slice(0,7), yrPre=tStr.slice(0,4);
+    const {data:logs}=await sb.from(TABLE).select("user_id,log_date,payload");
     const {data:profs}=await sb.from(T_PROFILE).select("user_id,name");
     const nameOf={}; (profs||[]).forEach(p=>{if(p.name)nameOf[p.user_id]=p.name;});
-    const stat={}; Object.keys(USERS).forEach(c=>{const u=USERS[c];stat[u.id]={id:u.id,name:nameOf[u.id]||u.name,sessions:0,reps:0,resisted:0};});
-    (logs||[]).forEach(r=>{const u=stat[r.user_id]; if(!u)return; const p=normalizeEntry(r.payload); p.sessions.forEach(s=>{if(s.done)u.sessions++; u.reps+=sessReps(s);});});
-    try{const {data:res}=await sb.from(T_RESIST).select("user_id,cals,won,created_at").gte("created_at",ws+"T00:00:00").lte("created_at",we+"T23:59:59");(res||[]).forEach(r=>{if(r.won===false)return;if(stat[r.user_id])stat[r.user_id].resisted+=(+r.cals||0);});}catch(e){console.warn("crew resist",e);}
-    const rows=Object.keys(stat).map(k=>stat[k]).sort((a,b)=>b.sessions-a.sessions||b.reps-a.reps);
-    const active=rows.some(r=>r.sessions>0||r.reps>0);
+    const acc={}; Object.keys(USERS).forEach(c=>{const u=USERS[c];acc[u.id]={id:u.id,name:nameOf[u.id]||u.name,days:new Set(),reps:0};});
+    (logs||[]).forEach(r=>{const u=acc[r.user_id]; if(!u)return; const p=normalizeEntry(r.payload); let logged=false; p.sessions.forEach(s=>{u.reps+=sessReps(s); if(sessLogged(s))logged=true;}); if(logged)u.days.add(r.log_date);});
+    const streakFromDates=set=>{let d=new Date(Date.now()-DAY_CUTOFF_H*3600*1000);if(!set.has(ymd(d)))d.setDate(d.getDate()-1);let n=0;for(;;){if(set.has(ymd(d))){n++;d.setDate(d.getDate()-1);}else break;}return n;};
+    const rows=Object.keys(acc).map(k=>{const u=acc[k];const ds=[...u.days];return{id:u.id,name:u.name,reps:u.reps,streak:streakFromDates(u.days),wk:ds.filter(d=>d>=ws&&d<=we).length,mo:ds.filter(d=>d.slice(0,7)===moPre).length,yr:ds.filter(d=>d.slice(0,4)===yrPre).length};});
+    rows.sort((a,b)=>b.wk-a.wk||b.reps-a.reps);
+    const active=rows.some(r=>r.wk>0);
     board.innerHTML=rows.map((r,i)=>{
       const lead=active&&i===0;
-      const tub=active&&i===rows.length-1&&rows.length>1&&(r.sessions<rows[0].sessions||r.reps<rows[0].reps);
-      return '<div class="crewrow'+(ME&&r.id===ME.id?' me':'')+'"><div class="crewrank">'+(lead?'👑':tub?'🪣':(i+1))+'</div><div class="crewname">'+esc(r.name)+(ME&&r.id===ME.id?' (you)':'')+(tub?'<br><span style="color:var(--ember);font-size:12px">Tub-o-Shit 💩</span>':'')+'</div><div class="crewstat"><b>'+r.sessions+'</b> sess<br>'+r.reps+' reps'+(r.resisted?'<br>'+r.resisted.toLocaleString()+' cal skipped':'')+'</div></div>';
+      const tub=active&&i===rows.length-1&&rows.length>1&&(r.wk<rows[0].wk||r.reps<rows[0].reps);
+      return '<div class="crewrow'+(ME&&r.id===ME.id?' me':'')+'"><div class="crewrank">'+(lead?'👑':tub?'🪣':(i+1))+'</div><div class="crewbody"><div class="crewname">'+esc(r.name)+(ME&&r.id===ME.id?' (you)':'')+(tub?' <span style="color:var(--ember);font-size:12px">· Tub-o-Shit 💩</span>':'')+'</div><div class="crewmini"><span><b>🔥'+r.streak+'</b>streak</span><span><b>'+r.wk+'</b>this wk</span><span><b>'+r.mo+'</b>this mo</span><span><b>'+r.yr+'</b>this yr</span><span><b>'+r.reps.toLocaleString()+'</b>reps</span></div></div></div>';
     }).join('');
     await renderWall();
   }catch(e){console.warn(e);board.innerHTML='<p class="note">Couldn\u2019t load crew stats.</p>';}
@@ -1228,6 +1252,7 @@ async function openApp(){
   await initCloud();
   await loadProfile();
   loadResist();
+  loadStall();
   await pullCloud();
   await pullResist();
   openDay();
