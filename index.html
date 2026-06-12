@@ -626,7 +626,15 @@ async function pushDate(d,immediate){
   const go=async()=>{
     setSync("sync");
     try{
-      const {error}=await sb.from(TABLE).upsert({user_id:ME.id,log_date:d,payload:DB[d],updated_at:new Date().toISOString()},{onConflict:"user_id,log_date"});
+      const e=normalizeEntry(DB[d]||{creatine:false,sessions:[]});
+      const sessions=(e.sessions||[]).filter(sessHasNums);
+      if(!sessions.length && !e.creatine){
+        // nothing actually logged for this day — don't create/keep an empty shell in the cloud
+        const {error}=await sb.from(TABLE).delete().eq("user_id",ME.id).eq("log_date",d);
+        if(error) throw error; setSync("ok"); return;
+      }
+      const payload={creatine:!!e.creatine,sessions:sessions};
+      const {error}=await sb.from(TABLE).upsert({user_id:ME.id,log_date:d,payload:payload,updated_at:new Date().toISOString()},{onConflict:"user_id,log_date"});
       if(error) throw error; setSync("ok");
     }catch(e){ console.warn("push failed",e); setSync("off"); }
   };
@@ -1027,6 +1035,7 @@ function ensure(date){const e=normalizeEntry(DB[date]);DB[date]=e;return e;}
 function allSessions(){const out=[];Object.keys(DB).forEach(d=>{normalizeEntry(DB[d]).sessions.forEach(s=>out.push({d,s}));});out.sort((a,b)=>a.d<b.d?-1:a.d>b.d?1:((a.s.ts||0)-(b.s.ts||0)));return out;}
 function sessReps(s){let t=0;Object.values(s.sets||{}).forEach(a=>a.forEach(v=>t+=(+v||0)));return t;}
 function sessLogged(s){return !!(s.done||Object.values(s.sets||{}).some(a=>a&&a.some(v=>+v>0)));}
+function sessHasNums(s){return Object.values(s.sets||{}).some(a=>a&&a.some(v=>+v>0));}
 /* ---- plateau / stall detection (opt-in rotation) ---- */
 let STALL_DISMISS={};
 function stallKey(){return "nightlift_stall_"+(ME?ME.id:"anon");}
