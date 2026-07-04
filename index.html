@@ -152,6 +152,19 @@
   .bar.empty{background:var(--panel-2)}
   .barx{display:flex;gap:4px;margin-top:6px}
   .barx span{flex:1;text-align:center;font-size:9px;color:var(--faint)}
+  .bodysvg{width:100%;height:auto;display:block;margin-top:4px}
+  .chartmeta{display:flex;justify-content:space-between;gap:8px;margin-top:8px;font-size:12px;color:var(--muted);flex-wrap:wrap}
+  .chartmeta b{color:var(--ink);font-weight:800}
+  .chartmeta .cmdelta{font-weight:800}
+  .froutine{margin:12px 0 0;padding:0;list-style:none;counter-reset:fr}
+  .froutine li{position:relative;padding:10px 0 10px 34px;border-top:1px solid var(--line);font-size:14px;line-height:1.5;color:var(--muted);counter-increment:fr}
+  .froutine li:first-child{border-top:none}
+  .froutine li:before{content:counter(fr);position:absolute;left:0;top:10px;width:22px;height:22px;border-radius:50%;background:var(--panel-2);border:1px solid var(--line);color:var(--gold);font-family:'Anton';font-size:12px;display:flex;align-items:center;justify-content:center}
+  .froutine li b{color:var(--ink)}
+  .facetrack{display:flex;gap:10px}
+  .ftbtn{flex:1;background:var(--panel-2);border:1px solid var(--line);color:var(--ink);font-family:inherit;font-weight:800;font-size:15px;padding:14px;border-radius:12px;cursor:pointer}
+  .ftbtn.on{border-color:var(--good);color:var(--good);background:rgba(126,224,166,.1)}
+  .ftbtn:active{transform:scale(.98)}
 
   .lib-day h3{font-family:'Anton';font-size:17px;letter-spacing:.02em;margin:14px 0 2px;display:flex;align-items:center;gap:9px}
   .lib-day h3 i{font-style:normal;font-family:'Hanken Grotesk';font-size:11px;font-weight:700;color:var(--ember);letter-spacing:.16em;text-transform:uppercase}
@@ -212,6 +225,16 @@
   .figbox{width:170px;max-width:62%}
   .figbox .figsvg{width:100%;height:auto;display:block}
   .figcap{margin-top:6px;font-size:14px;font-weight:700;color:var(--ember);letter-spacing:.06em;text-transform:uppercase}
+  .ytposter{position:relative;width:100%;aspect-ratio:16/9;border-radius:12px;overflow:hidden;background:#000;cursor:pointer;margin:0 0 12px;display:flex;align-items:center;justify-content:center}
+  .ytposter img{width:100%;height:100%;object-fit:cover;opacity:.82}
+  .ytposter.noimg{background:linear-gradient(135deg,#1c1510,#2c1d15)}
+  .ytplay{position:absolute;width:56px;height:56px;border-radius:50%;background:rgba(255,0,0,.9);color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;padding-left:4px;box-shadow:0 4px 16px rgba(0,0,0,.55);pointer-events:none}
+  .ytlabel{position:absolute;bottom:8px;right:10px;background:rgba(0,0,0,.62);color:#fff;font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;pointer-events:none}
+  .ytposter.playing{cursor:default}
+  .ytframe{width:100%;height:100%;border:0;display:block}
+  .ytsearch{width:100%;margin:0 0 12px;background:var(--panel-2);border:1px solid var(--line);border-left:3px solid #ff0000;color:var(--ink);font-family:inherit;font-weight:700;font-size:14px;padding:12px 14px;border-radius:10px;cursor:pointer;text-align:left;display:flex;align-items:center;gap:9px}
+  .ytsearch span{color:#ff0000;font-size:15px}
+  .ytsearch:active{transform:scale(.99)}
   .cell.future{opacity:.28}
   .exbtns{display:flex;gap:8px;margin-top:12px}
   .bonusadd{width:100%;margin-top:14px;background:linear-gradient(180deg,rgba(245,197,80,.16),rgba(245,197,80,.06));border:1px dashed rgba(245,197,80,.55);color:var(--gold);font-family:'Anton';letter-spacing:.04em;font-size:16px;padding:14px;border-radius:14px;cursor:pointer}
@@ -440,38 +463,6 @@
     </div>
   </section>
 
-  <!-- ===================== GUIDE ===================== -->
-  <section id="view-guide" class="hide">
-    <div class="card">
-      <span class="eyebrow">Coach&#39;s note — make light weight build muscle</span>
-      <p class="note" style="margin-top:8px">A 25 lb bell and 10 lb dumbbells are light for 190 lbs, so growth comes from <b>effort, not load</b>. Lighter weights taken close to failure build muscle as well as heavy ones — but only if you earn it. Three rules carry this whole program:</p>
-      <p class="note" style="margin-top:8px">• <b>Take the last set of every move to true failure</b> (on safe lifts — push-ups, squats, rows, curls). On overhead and pressing work, leave 1 rep for safety.<br>• <b>Slow the lowering to ~3 seconds</b> and add the pauses/1.5-reps the app flags — that&#39;s how you make 25 lbs feel like 50.<br>• <b>Keep rest short, 30–45 sec.</b> Density is your friend in a 12-minute window.</p>
-    </div>
-
-    <div class="card">
-      <span class="eyebrow">Progressive overload (no heavier weights needed)</span>
-      <p class="note" style="margin-top:8px">Double progression: <b>hit the top of the rep range on all sets → then make it harder</b> (slower tempo, add a pause, harder variation, or +1 set) → only buy a heavier bell once you&#39;ve maxed those. The reps you log here are the scoreboard. If the bars on the Progress tab trend up over weeks, you&#39;re growing.</p>
-    </div>
-
-    <div class="card">
-      <span class="eyebrow">Nutrition — the part that actually builds it</span>
-      <p class="note" style="margin-top:8px">Training is the signal; food is the material. To add muscle at 47 you need <b>roughly 0.7–1 g of protein per pound of bodyweight</b> — for you that&#39;s about <b>130–160 g a day</b>, spread across meals (~30–40 g each). Eat at maintenance or a slight surplus; you can&#39;t build much on a deficit. <b>Sleep 7–9 hours</b> — that&#39;s when the repair happens. Creatine and the workout do nothing without these two.</p>
-    </div>
-
-    <div class="card">
-      <span class="eyebrow">Creatine — your Target tub</span>
-      <p class="note" style="margin-top:8px"><b>How much:</b> 3–5 g (about a rounded teaspoon) of creatine monohydrate in any drink. <b>When:</b> timing barely matters once muscles are saturated — the only rule that counts is <b>every single day, rest days included.</b> Training at night, take it with dinner or right after the session.</p>
-      <p class="note" style="margin-top:10px"><b>No loading phase needed</b> — a steady 5 g saturates muscle in 3–4 weeks with less bloat. Expect 2–4 lbs of water weight early; that&#39;s normal and expected. Stay hydrated. Check with a doctor first if you have kidney issues.</p>
-    </div>
-
-    <div class="card">
-      <span class="eyebrow">The 4-day rotation</span>
-      <p class="note" style="margin-top:8px">A → B → C → D → repeat. The app auto-advances each time you log; tap any day to override. This hits every muscle ~2×/week — the proven sweet spot for growth and recovery. Aim for <b>4–6 sessions a week</b>; take a rest day whenever you feel beat up. The streak survives planned rest.</p>
-      <div id="libList"></div>
-    </div>
-    <p class="micro">Educational tool, not medical advice. Build form before intensity; stop on any sharp or joint pain.</p>
-  </section>
-
   <!-- ===================== CREW ===================== -->
   <section id="view-crew" class="hide">
     <div class="card">
@@ -514,20 +505,40 @@
   </section>
 
   <!-- ===================== RESIST ===================== -->
-  <section id="view-resist" class="hide">
+  <section id="view-face" class="hide">
     <div class="card">
-      <span class="eyebrow">Willpower bank</span>
-      <div id="resistTally"></div>
-      <p class="note" style="margin-top:10px">Tap what you're craving, get a better move, and bank the skip. Numbers are rough estimates of what you didn't eat — this is about cutting mindless grazing, not skipping real meals.</p>
+      <span class="eyebrow">Today&#39;s routine</span>
+      <div id="faceTrack" class="facetrack"></div>
+      <p class="note" style="margin-top:10px">Two minutes, morning and night. Tap AM/PM once you&#39;ve done it — same daily habit idea as your lifts. Resets each day.</p>
     </div>
+
     <div class="card">
-      <span class="eyebrow">Craving something? Tap it.</span>
-      <div id="cravingGrid" class="cravegrid"></div>
-      <div id="resistPanel"></div>
+      <span class="eyebrow">☀️ Morning</span>
+      <ol class="froutine">
+        <li><b>Rinse or gently cleanse.</b> In dry weather you can just splash lukewarm water in the AM; use the CeraVe only if your skin feels oily or you sweated overnight. Over-cleansing strips moisture.</li>
+        <li><b>Hyaluronic acid serum.</b> 3–4 drops onto damp skin — this matters most in dry air, since the serum needs water to grab onto.</li>
+        <li><b>Tallow balm.</b> Thin layer, pressed in over the serum to seal it.</li>
+        <li><b>Sunscreen.</b> Last step, always. At Colorado altitude UV is strong even in winter and on cloudy days.</li>
+      </ol>
     </div>
-    <div class="card tight">
-      <span class="eyebrow">Recent wins</span>
-      <div id="resistHistory"></div>
+
+    <div class="card">
+      <span class="eyebrow">🌙 Evening</span>
+      <ol class="froutine">
+        <li><b>Cleanse.</b> CeraVe Hydrating Cleanser to remove the day&#39;s sunscreen, dirt, and buildup.</li>
+        <li><b>Hyaluronic acid serum.</b> Again on damp skin, 3–4 drops.</li>
+        <li><b>Tallow balm.</b> A slightly heavier scoop is fine at night — it works as an overnight barrier-repair layer while you sleep.</li>
+      </ol>
+    </div>
+
+    <div class="card">
+      <span class="eyebrow">✨ Weekly</span>
+      <p class="note" style="margin-top:8px">A gentle exfoliant <b>1–2× a week</b> — no more. Skip it on any day your skin feels raw or wind-burned.</p>
+    </div>
+
+    <div class="card">
+      <span class="eyebrow">Make or break it</span>
+      <p class="note" style="margin-top:8px">• <b>Damp skin, both times.</b> Serum on damp, balm to seal — the single biggest lever in a dry climate.<br>• <b>Thinnest to thickest.</b> Water-based serum first, oil-based balm last (before SPF in the AM).<br>• <b>Give the balm 2–3 weeks</b> before judging it — barrier repair isn&#39;t instant.<br>• <b>Reapply sunscreen</b> if you&#39;re outside for long stretches, especially skiing — snow reflects UV right back at you.</p>
     </div>
   </section>
   <section id="view-food" class="hide">
@@ -571,15 +582,45 @@
       <div id="foodHistory"></div>
     </div>
   </section>
+
+  <!-- ===================== BODY ===================== -->
+  <section id="view-body" class="hide">
+    <div class="card">
+      <span class="eyebrow">The real scoreboard</span>
+      <div class="statgrid" id="bodyStats" style="margin-top:10px"></div>
+      <p class="note" id="bodyNote" style="margin-top:12px"></p>
+    </div>
+    <div class="card">
+      <span class="eyebrow">Log today</span>
+      <div class="mfrow">
+        <div class="mffield"><label>Weight (lb)</label><input id="bWeight" type="number" inputmode="decimal" min="0" step="0.1" placeholder="—"></div>
+        <div class="mffield"><label>Waist (in)</label><input id="bWaist" type="number" inputmode="decimal" min="0" step="0.1" placeholder="—"></div>
+      </div>
+      <button id="bSave" class="finish" type="button">Save today</button>
+      <p class="note" style="margin-top:8px">Weigh first thing in the morning, same conditions. Measure your waist relaxed, around the belly button. Day-to-day jumps are mostly water and food — watch the line over weeks, not the daily number.</p>
+    </div>
+    <div class="card">
+      <span class="eyebrow">Weight trend</span>
+      <div id="bodyChartW"></div>
+    </div>
+    <div class="card">
+      <span class="eyebrow">Waist trend</span>
+      <div id="bodyChartWaist"></div>
+    </div>
+    <div class="card tight">
+      <span class="eyebrow">History</span>
+      <div id="bodyHistory"></div>
+    </div>
+  </section>
 </div>
 
 <nav class="tabs hide" id="tabs">
   <button data-view="today" class="on"><span class="ico">🔥</span>Tonight</button>
   <button data-view="progress"><span class="ico">📈</span>Progress</button>
   <button data-view="crew"><span class="ico">👥</span>Crew</button>
-  <button data-view="resist"><span class="ico">🛑</span>Resist</button>
+  <button data-view="face"><span class="ico">🧴</span>Face</button>
   <button data-view="food"><span class="ico">🍗</span>Food</button>
-  <button data-view="guide"><span class="ico">📖</span>Guide</button>
+  <button data-view="body"><span class="ico">⚖️</span>Body</button>
 </nav>
 <div class="toast" id="toast">Logged. Nice work. 💪</div>
 
@@ -599,6 +640,7 @@ const TABLE       = "nightlift_log";
 const T_PROFILE   = "nightlift_profile";
 const T_WALL      = "nightlift_wall";
 const T_FOOD      = "nightlift_food";
+const T_BODY      = "nightlift_body";
 const PATTERN_POSE={squat:"d2",hinge:"a2",lunge:"a3",splitsquat:"a1",press:"b2",overhead:"b3",row:"c1",curl:"c3",raise:"b4",rearfly:"c4",swing:"d1",pushup:"b1",plank:"d5",calf:"a4",renegade:"d4"};
 let ME=null, PROFILE={name:"",height:"",weight:"",overrides:{}};
 const USERS_BYID=Object.keys(USERS).reduce((o,c)=>{o[USERS[c].id]=USERS[c].name;return o;},{});
@@ -920,6 +962,17 @@ function gearAdvice(){
 }
 /* ===================== exercise bank (offline AI-free swaps) ===================== */
 const EX_CAT={a1:"quads",a2:"hamstrings",a3:"quads",a4:"calves",a5:"forearms",b1:"chest",b2:"chest",b3:"shoulders",b4:"sidedelts",c1:"back",c2:"back",c3:"biceps",c4:"reardelts",c5:"forearms",d1:"posterior",d2:"quads",d3:"chest",d4:"core",d5:"core",a6:"quads",a7:"posterior",b5:"chest",b6:"chest",c6:"biceps",c7:"back",d6:"quads",d7:"core"};
+/* Curated YouTube form-demo clips (video IDs). Exercises not listed here open a YouTube search on tap. */
+const YT={a1:"2C-uNgKwPLE",a2:"Uc5rP5xs7qQ",b1:"WDIpL0pjun0",d3:"WDIpL0pjun0",c3:"in7PaeYlhrM",d1:"sSESeQAir2M"};
+function exMedia(ex){
+  const vid=YT[ex.id];
+  if(vid){
+    return '<div class="ytposter" data-yt="'+vid+'" data-name="'+esc(ex.name)+'">'+
+      '<img src="https://i.ytimg.com/vi/'+vid+'/hqdefault.jpg" alt="'+esc(ex.name)+' form demo" loading="lazy" onerror="this.style.display=\'none\';this.parentNode.classList.add(\'noimg\')">'+
+      '<span class="ytplay">▶</span><span class="ytlabel">Tap to play</span></div>';
+  }
+  return '<button class="ytsearch" type="button" data-q="'+esc(ex.name)+'"><span>▶</span> Watch '+esc(ex.name)+' on YouTube</button>';
+}
 const BANK={
 quads:[
 {name:"Goblet Squat",musc:"Quads · glutes",load:"25 KB",sets:3,reps:"15–20",pattern:"squat",amrap:true,cues:["Bell at your chest, elbows tucked.","Sit down for 3 slow seconds, chest tall.","Drive through the heels to stand."],tech:"Last set to failure — light load means high reps build the legs.",prog:"Add a 2-sec pause at the bottom."},
@@ -1189,7 +1242,7 @@ function exCard(ex){
       '<div class="chev">▶</div>'+
     '</div>'+
     '<div class="ex-body"><div class="ex-inner">'+
-      figFrames(poseId(ex))+
+      exMedia(ex)+
       ex.cues.map(c=>'<div class="cue">'+esc(c)+'</div>').join('')+
       (ex.tech?'<div class="tech"><b>Coach:</b> '+esc(ex.tech)+'</div>':'')+
       (ex.prog?'<div class="prog"><b>Level up:</b> '+esc(ex.prog)+'</div>':'')+
@@ -1208,6 +1261,10 @@ function exCard(ex){
   const rs=el.querySelector(".ex-reset"); if(rs) rs.onclick=ev=>{ev.stopPropagation();resetExercise(ex.id);};
   const sg=el.querySelector(".stallgo"); if(sg) sg.onclick=ev=>{ev.stopPropagation();dismissStall(ex.id);replaceExercise(ex);};
   const sk=el.querySelector(".stallkeep"); if(sk) sk.onclick=ev=>{ev.stopPropagation();dismissStall(ex.id);};
+  const poster=el.querySelector(".ytposter");
+  if(poster) poster.onclick=ev=>{ev.stopPropagation();const id=poster.dataset.yt;poster.classList.add("playing");poster.innerHTML='<iframe class="ytframe" src="https://www.youtube-nocookie.com/embed/'+id+'?autoplay=1&rel=0&playsinline=1&modestbranding=1" title="'+poster.dataset.name+' demo" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen></iframe>';};
+  const ysr=el.querySelector(".ytsearch");
+  if(ysr) ysr.onclick=ev=>{ev.stopPropagation();window.open("https://www.youtube.com/results?search_query="+encodeURIComponent(ysr.dataset.q+" proper form how to"),"_blank","noopener");};
   return el;
 }
 function renderExList(){
@@ -1564,6 +1621,7 @@ const _emojiByName={}; FOODS.forEach(f=>{_emojiByName[f.name]=f.emoji;});
 function emojiFor(name){if(_emojiByName[name])return _emojiByName[name];const base=String(name||"").replace(/\s*×\d+$/,"");return _emojiByName[base]||"🍽️";}
 function recentFoods(){const cutoff=shiftYmd(today(),-(RECENT_DAYS-1));const map=new Map();FOOD.forEach(r=>{if(!r.date||r.date<cutoff)return;const key=r.item+"|"+r.p+"|"+r.c+"|"+r.cal;const e=map.get(key);if(e){e.count++;if(r.ts>e.ts)e.ts=r.ts;}else map.set(key,{item:r.item,p:r.p,c:r.c,cal:r.cal,count:1,ts:r.ts});});return [...map.values()].sort((a,b)=>b.ts-a.ts).slice(0,18);}
 let FOOD=[], foodCat="recent", foodSel=null, foodQty=1;
+let BODY=[];
 function foodKey(){return "nightlift_food_"+(ME?ME.id:"anon");}
 function goalKey(){return "nightlift_goals_"+(ME?ME.id:"anon");}
 function loadFood(){try{FOOD=JSON.parse(store.get(foodKey()))||[];}catch(e){FOOD=[];}}
@@ -1581,6 +1639,91 @@ async function logFood(item,p,c,cal){
 }
 async function delFood(row){FOOD=FOOD.filter(r=>r!==row);saveFoodLocal();renderFood();if(cloud&&row.id){try{await sb.from(T_FOOD).delete().eq("id",row.id);}catch(e){console.warn("food del",e);}}}
 function editGoals(){const g=foodGoals();const p=prompt("Daily protein goal (grams):",g.p);if(p===null)return;const c=prompt("Daily carb goal (grams):",g.c);if(c===null)return;const cal=prompt("Daily calorie cap — stay under (calories):",g.cal);if(cal===null)return;saveGoals({p:Math.max(0,parseInt(p)||g.p),c:Math.max(0,parseInt(c)||g.c),cal:Math.max(0,parseInt(cal)||g.cal)});renderFood();}
+/* ===================== FACE (skincare routine + daily check-off) ===================== */
+function faceKey(){return "nightlift_face_"+(ME?ME.id:"anon");}
+function loadFaceState(){let s=null;try{s=JSON.parse(store.get(faceKey()));}catch(e){}if(!s||typeof s!=="object"||s.date!==today())s={date:today(),am:false,pm:false};return s;}
+function saveFaceState(s){try{store.set(faceKey(),JSON.stringify(s));}catch(e){}}
+function renderFace(){
+  const el=document.getElementById("faceTrack");if(!el)return;
+  const s=loadFaceState();
+  el.innerHTML='<button class="ftbtn'+(s.am?" on":"")+'" id="ftAM" type="button">'+(s.am?"✓ ":"")+'☀️ AM done</button>'+
+               '<button class="ftbtn'+(s.pm?" on":"")+'" id="ftPM" type="button">'+(s.pm?"✓ ":"")+'🌙 PM done</button>';
+  document.getElementById("ftAM").onclick=()=>{const st=loadFaceState();st.am=!st.am;saveFaceState(st);renderFace();};
+  document.getElementById("ftPM").onclick=()=>{const st=loadFaceState();st.pm=!st.pm;saveFaceState(st);renderFace();};
+}
+/* ===================== BODY (weight + waist trend) ===================== */
+function bodyKey(){return "nightlift_body_"+(ME?ME.id:"anon");}
+function loadBody(){try{BODY=JSON.parse(store.get(bodyKey()))||[];}catch(e){BODY=[];}if(!Array.isArray(BODY))BODY=[];sortBody();}
+function saveBodyLocal(){try{store.set(bodyKey(),JSON.stringify(BODY.slice(-1000)));}catch(e){}}
+function sortBody(){BODY.sort((a,b)=>a.date<b.date?-1:(a.date>b.date?1:0));}
+function bodyNum(v){if(v==null||v==="")return null;const n=Math.round((+v)*10)/10;return isNaN(n)?null:Math.max(0,n);}
+function fmt1(v){const n=Math.round(v*10)/10;return (Math.abs(n-Math.round(n))<0.05)?String(Math.round(n)):n.toFixed(1);}
+async function pullBody(){if(!cloud)return;try{const {data}=await sb.from(T_BODY).select("log_date,weight,waist").eq("user_id",ME.id).order("log_date",{ascending:true}).limit(1000);if(data){BODY=data.map(r=>({date:r.log_date,w:r.weight==null?null:+r.weight,waist:r.waist==null?null:+r.waist}));sortBody();saveBodyLocal();const v=document.getElementById("view-body");if(v&&!v.classList.contains("hide"))renderBody();}}catch(e){console.warn("body pull",e);}}
+async function logBody(weight,waist){
+  const t=today();
+  const w=bodyNum(weight), wa=bodyNum(waist);
+  if(w==null&&wa==null)return;
+  let row=BODY.find(r=>r.date===t);
+  if(row){ if(w!=null)row.w=w; if(wa!=null)row.waist=wa; }
+  else { row={date:t,w:w,waist:wa}; BODY.push(row); sortBody(); }
+  saveBodyLocal(); renderBody();
+  const to=document.getElementById("toast");if(to){to.textContent="Saved. 💪";to.classList.add("show");setTimeout(()=>{to.classList.remove("show");to.textContent="Logged. Nice work. 💪";},1400);}
+  if(cloud){try{await sb.from(T_BODY).upsert({user_id:ME.id,log_date:t,weight:row.w,waist:row.waist,updated_at:new Date().toISOString()},{onConflict:"user_id,log_date"});}catch(e){console.warn("body upsert",e);}}
+}
+async function delBody(date){BODY=BODY.filter(r=>r.date!==date);saveBodyLocal();renderBody();if(cloud){try{await sb.from(T_BODY).delete().eq("user_id",ME.id).eq("log_date",date);}catch(e){console.warn("body del",e);}}}
+function svgTrend(series,opts){
+  opts=opts||{};const color=opts.color||"var(--ember)";const unit=opts.unit||"";
+  const pts=series.filter(p=>p.val!=null);
+  if(pts.length<2)return '<p class="note">Log at least two days and your trend line shows up here. One data point isn\u2019t a trend — give it a week.</p>';
+  const W=320,H=120,padL=6,padR=6,padT=12,padB=14;
+  const vals=pts.map(p=>p.val);let mn=Math.min(...vals),mx=Math.max(...vals);
+  if(mn===mx){mn-=1;mx+=1;}const rng=mx-mn;mn-=rng*0.18;mx+=rng*0.18;
+  const n=pts.length;
+  const X=i=>padL+(i/(n-1))*(W-padL-padR);
+  const Y=v=>padT+(1-(v-mn)/(mx-mn))*(H-padT-padB);
+  const line=pts.map((p,i)=>(i?"L":"M")+X(i).toFixed(1)+" "+Y(p.val).toFixed(1)).join(" ");
+  const area="M"+X(0).toFixed(1)+" "+(H-padB)+" "+pts.map((p,i)=>"L"+X(i).toFixed(1)+" "+Y(p.val).toFixed(1)).join(" ")+" L"+X(n-1).toFixed(1)+" "+(H-padB)+" Z";
+  const dots=pts.map((p,i)=>'<circle cx="'+X(i).toFixed(1)+'" cy="'+Y(p.val).toFixed(1)+'" r="'+(i===n-1?3.2:2.2)+'" fill="'+color+'"/>').join("");
+  const first=pts[0].val,last=pts[n-1].val,diff=Math.round((last-first)*10)/10;
+  const good=diff<=0;
+  return '<svg viewBox="0 0 '+W+' '+H+'" class="bodysvg" role="img" aria-label="trend">'+
+    '<path d="'+area+'" fill="'+color+'" opacity="0.12"/>'+
+    '<path d="'+line+'" fill="none" stroke="'+color+'" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>'+dots+'</svg>'+
+    '<div class="chartmeta"><span>'+pts[0].date.slice(5)+' · <b>'+fmt1(first)+unit+'</b></span>'+
+    '<span class="cmdelta" style="color:'+(good?"var(--good)":"var(--ember)")+'">'+(diff>0?"+":"")+fmt1(diff)+unit+' overall</span>'+
+    '<span>now · <b>'+fmt1(last)+unit+'</b></span></div>';
+}
+function bodyStatTiles(){
+  const w=BODY.filter(r=>r.w!=null), wa=BODY.filter(r=>r.waist!=null);
+  const latestW=w.length?w[w.length-1]:null, latestWa=wa.length?wa[wa.length-1]:null;
+  function delta30(arr,key){if(arr.length<2)return null;const last=arr[arr.length-1];const cutoff=shiftYmd(today(),-30);let base=arr[0];for(let i=0;i<arr.length;i++){if(arr[i].date<=cutoff)base=arr[i];}if(base===last)base=arr[0];return Math.round((last[key]-base[key])*10)/10;}
+  const dW=delta30(w,"w"), dWa=delta30(wa,"waist");
+  function tile(val,unit,label,dv){const arrow=dv==null?"":(dv<0?"▼":(dv>0?"▲":"·"));const col=dv==null?"":(dv<=0?"var(--good)":"var(--ember)");return '<div class="stat"><div class="n">'+(val==null?"—":fmt1(val)+'<span style="font-size:13px;color:var(--muted)"> '+unit+'</span>')+'</div><div class="l">'+label+(dv==null?"":' <span style="color:'+col+'">'+arrow+fmt1(Math.abs(dv))+'</span>')+'</div></div>';}
+  return tile(latestW?latestW.w:null,"lb","Weight",dW)+tile(latestWa?latestWa.waist:null,"in","Waist",dWa)+'<div class="stat"><div class="n">'+Math.max(w.length,wa.length)+'</div><div class="l">Check-ins</div></div>';
+}
+function renderBody(){
+  const t=today();const row=BODY.find(r=>r.date===t);
+  const bw=document.getElementById("bWeight"),bwa=document.getElementById("bWaist");
+  if(bw&&document.activeElement!==bw)bw.value=row&&row.w!=null?fmt1(row.w):"";
+  if(bwa&&document.activeElement!==bwa)bwa.value=row&&row.waist!=null?fmt1(row.waist):"";
+  document.getElementById("bodyStats").innerHTML=bodyStatTiles();
+  const w=BODY.filter(r=>r.w!=null), wa=BODY.filter(r=>r.waist!=null);
+  let note="";
+  if(!BODY.length)note="No check-ins yet. Log your weight and waist a couple times a week — the trend over weeks is the only thing that actually tells you if fat\u2019s coming off. That stubborn lower-back/belly fat is too small to see day to day, but it shows up here.";
+  else{const dwa=wa.length>=2?Math.round((wa[wa.length-1].waist-wa[0].waist)*10)/10:null;
+    if(dwa!=null&&dwa<0)note="Waist down "+fmt1(Math.abs(dwa))+'" since you started tracking — that\u2019s the real signal the deficit is working, more than the scale.';
+    else if(dwa!=null&&dwa>0)note="Waist is up a touch. One read isn\u2019t a verdict — keep logging and watch the multi-week direction. If it holds, tighten the calorie cap slightly.";
+    else note="Keep logging. Weight bounces daily with water and food; the line over weeks is the scoreboard. Waist is the better gauge for that stubborn fat.";}
+  document.getElementById("bodyNote").textContent=note;
+  document.getElementById("bodyChartW").innerHTML=svgTrend(w.map(r=>({date:r.date,val:r.w})),{unit:" lb",color:"var(--ember)"});
+  document.getElementById("bodyChartWaist").innerHTML=svgTrend(wa.map(r=>({date:r.date,val:r.waist})),{unit:'"',color:"var(--gold)"});
+  const h=document.getElementById("bodyHistory");
+  const rows=BODY.slice().reverse().slice(0,30);
+  h.innerHTML=rows.length?rows.map(r=>'<div class="rrow"><span>'+fmtNice(r.date)+'</span><span class="rmeta">'+(r.w!=null?fmt1(r.w)+" lb":"")+(r.w!=null&&r.waist!=null?" · ":"")+(r.waist!=null?fmt1(r.waist)+'"':"")+' <button class="xdel" type="button" data-d="'+r.date+'">✕</button></span></div>').join(''):'<p class="note">Nothing logged yet.</p>';
+  h.querySelectorAll(".xdel").forEach(b=>b.onclick=()=>{if(confirm("Delete this check-in?"))delBody(b.dataset.d);});
+  const sv=document.getElementById("bSave");
+  if(sv&&!sv.dataset.b){sv.dataset.b="1";sv.onclick=()=>{const wv=document.getElementById("bWeight").value,av=document.getElementById("bWaist").value;if((wv===""||+wv<=0)&&(av===""||+av<=0))return;logBody(wv,av);};}
+}
 function renderFood(){
   const tally=document.getElementById("foodTally"); if(!tally)return;
   const g=foodGoals(), tot=foodToday();
@@ -1672,13 +1815,13 @@ function renderLibrary(){const lib=document.getElementById("libList");lib.innerH
 /* ===================== reset ===================== */
 document.getElementById("resetBtn").onclick=async()=>{
   if(!confirm("Clear ALL logged sessions, resist wins, and food everywhere (cloud + this device)?"))return;
-  DB={};saveLocal();RESIST=[];saveResistLocal();FOOD=[];saveFoodLocal();
-  if(cloud){try{await sb.from(TABLE).delete().eq("user_id",ME.id);}catch(e){console.warn(e);}try{await sb.from(T_RESIST).delete().eq("user_id",ME.id);}catch(e){console.warn(e);}try{await sb.from(T_FOOD).delete().eq("user_id",ME.id);}catch(e){console.warn(e);}}
+  DB={};saveLocal();RESIST=[];saveResistLocal();FOOD=[];saveFoodLocal();BODY=[];saveBodyLocal();
+  if(cloud){try{await sb.from(TABLE).delete().eq("user_id",ME.id);}catch(e){console.warn(e);}try{await sb.from(T_RESIST).delete().eq("user_id",ME.id);}catch(e){console.warn(e);}try{await sb.from(T_FOOD).delete().eq("user_id",ME.id);}catch(e){console.warn(e);}try{await sb.from(T_BODY).delete().eq("user_id",ME.id);}catch(e){console.warn(e);}}
   openDay();renderToday();renderProgress();
 };
 
 /* ===================== tabs ===================== */
-document.querySelectorAll("nav.tabs button").forEach(btn=>{btn.onclick=()=>{if(typeof clearSurf==="function")clearSurf();document.querySelectorAll("nav.tabs button").forEach(b=>b.classList.remove("on"));btn.classList.add("on");const v=btn.dataset.view;["today","progress","guide","crew","resist","food"].forEach(id=>document.getElementById("view-"+id).classList.toggle("hide",id!==v));if(v==="today"){openDay();renderToday();}if(v==="progress")renderProgress();if(v==="crew")renderCrew();if(v==="resist")renderResist();if(v==="food")renderFood();window.scrollTo({top:0,behavior:"smooth"});};});
+document.querySelectorAll("nav.tabs button").forEach(btn=>{btn.onclick=()=>{if(typeof clearSurf==="function")clearSurf();document.querySelectorAll("nav.tabs button").forEach(b=>b.classList.remove("on"));btn.classList.add("on");const v=btn.dataset.view;["today","progress","crew","face","food","body"].forEach(id=>document.getElementById("view-"+id).classList.toggle("hide",id!==v));if(v==="today"){openDay();renderToday();}if(v==="progress")renderProgress();if(v==="crew")renderCrew();if(v==="face")renderFace();if(v==="food")renderFood();if(v==="body")renderBody();window.scrollTo({top:0,behavior:"smooth"});};});
 
 /* crew controls */
 function renderGear(){const g=document.getElementById("gearTips");if(!g)return;g.innerHTML=gearAdvice().map(t=>'<p class="note" style="margin-top:8px">• '+t+'</p>').join('');}
@@ -1702,15 +1845,17 @@ async function openApp(){
   const aw=document.getElementById("appWrap"); aw.classList.remove("hide"); aw.style.display="block";
   const tb=document.getElementById("tabs"); tb.classList.remove("hide"); tb.style.display="flex";
   DB=loadLocal(); openDay();
-  try{ renderToday(); renderLibrary(); }catch(e){ console.error(e); }
+  try{ renderToday(); }catch(e){ console.error(e); }
   await initCloud();
   await loadProfile();
   loadResist();
   loadStall();
   loadFood();
+  loadBody();
   await pullCloud();
   await pullResist();
   await pullFood();
+  await pullBody();
   openDay();
   try{ renderToday(); }catch(e){ console.warn(e); }
 }
