@@ -242,6 +242,11 @@
   .bonushdr{margin-top:18px;padding:4px 2px;color:var(--gold);font-family:'Anton';font-size:17px;letter-spacing:.05em;display:flex;align-items:baseline;gap:8px}
   .bonushdr span{font-family:'Hanken Grotesk',sans-serif;font-size:12px;font-weight:600;letter-spacing:.02em;color:var(--faint);text-transform:none}
   .bonusrm{width:100%;margin-top:10px;background:none;border:1px solid var(--line);color:var(--muted);font-family:inherit;font-weight:700;font-size:13px;padding:9px;border-radius:10px;cursor:pointer}
+  .armadd{width:100%;margin-top:10px;background:linear-gradient(180deg,rgba(155,140,255,.16),rgba(155,140,255,.06));border:1px dashed rgba(155,140,255,.6);color:#b9adff;font-family:'Anton';letter-spacing:.04em;font-size:16px;padding:14px;border-radius:14px;cursor:pointer}
+  .armadd:active{transform:scale(.99)}
+  .armhdr{margin-top:18px;padding:4px 2px;color:#b9adff;font-family:'Anton';font-size:17px;letter-spacing:.05em;display:flex;align-items:baseline;gap:8px}
+  .armhdr span{font-family:'Hanken Grotesk',sans-serif;font-size:12px;font-weight:600;letter-spacing:.02em;color:var(--faint);text-transform:none}
+  .armrm{width:100%;margin-top:10px;background:none;border:1px solid var(--line);color:var(--muted);font-family:inherit;font-weight:700;font-size:13px;padding:9px;border-radius:10px;cursor:pointer}
   .ex-replace,.ex-reset{flex:1;background:var(--panel-2);border:1px solid var(--line);color:var(--ink);font-family:inherit;font-weight:700;font-size:14px;padding:10px;border-radius:10px;cursor:pointer}
   .ex-replace{border-color:rgba(255,106,61,.45);color:var(--ember)}
   .ex-replace:disabled{opacity:.6}
@@ -903,7 +908,27 @@ function repTarget(r){r=(r||"").toLowerCase();if(r.indexOf("failure")>=0)return"
 /* ===================== per-user program (with AI swaps) ===================== */
 function dayEx(workout){return PROGRAM[workout].ex.map(ex=>{const o=PROFILE.overrides&&PROFILE.overrides[ex.id];return o?Object.assign({},ex,o,{id:ex.id,star:0}):ex;});}
 function bonusEx(workout){const b=PROGRAM[workout]&&PROGRAM[workout].bonus;return Array.isArray(b)?b.map(ex=>{const o=PROFILE.overrides&&PROFILE.overrides[ex.id];return o?Object.assign({},ex,o,{id:ex.id,star:0}):ex;}):[];}
-function shownEx(){const base=dayEx(S.workout);return S&&S.bonus?base.concat(bonusEx(S.workout)):base;}
+function shownEx(){let l=dayEx(S.workout);if(S&&S.bonus)l=l.concat(bonusEx(S.workout));if(S&&S.armboost){const a=armEx(S.workout);if(a)l=l.concat([a]);}return l;}
+/* Arm Boost — one focused arm-mass move per day, rotating biceps/triceps across the week */
+const ARMBOOST={
+  A:{id:"a8",name:"DB Overhead Triceps Extension",musc:"Triceps · long head",load:"2×10 DB",sets:3,reps:"10–15",amrap:true,tier:"med",
+     cues:["A dumbbell in each hand, press them straight overhead.","Lower behind your head by bending only at the elbows — keep them tucked and pointed up.","Drive back to full lockout and squeeze."],
+     tech:"The long head is most of your arm's mass, and it only grows under a full overhead stretch. This is the single best triceps mass move.",
+     prog:"Slow the lower to 3 sec, then go heavier."},
+  B:{id:"b7",name:"Incline DB Curl",musc:"Biceps · long head",load:"2×10 DB",sets:3,reps:"10–14",amrap:true,tier:"med",
+     cues:["Lean back on an incline (or the arm of a couch) so your arms hang behind your torso.","Curl up without letting your elbows drift forward.","Lower all the way down — the deep stretch at the bottom is where the growth is."],
+     tech:"The behind-the-body position stretches the long head of the biceps under load — the key driver of arm width.",
+     prog:"Pause 1 sec at the bottom stretch, then go heavier."},
+  C:{id:"c8",name:"DB Lying Triceps Extension",musc:"Triceps",load:"2×10 DB",sets:3,reps:"10–14",amrap:true,tier:"med",
+     cues:["Lie on your back (floor or bench), a dumbbell in each hand, arms straight up.","Bend only at the elbows to lower the DBs beside your head.","Keep the upper arms still and vertical; extend back up and lock out."],
+     tech:"Skull crushers overload the triceps directly — the fastest way to add thickness to the back of the arm.",
+     prog:"Lower to a 3-sec count, then go heavier."},
+  D:{id:"d8",name:"DB Zottman Curl",musc:"Biceps · forearms",load:"2×10 DB",sets:3,reps:"10–14",amrap:true,tier:"med",
+     cues:["Curl up with your palms facing up, like a normal curl.","At the top, rotate your palms to face down.","Lower slowly in that palms-down grip, then rotate back at the bottom."],
+     tech:"Loads the biceps on the way up and the forearms on the way down — builds the whole arm and your grip in one move.",
+     prog:"Slow the palms-down lowering — that eccentric is the mass-builder."}
+};
+function armEx(workout){const a=ARMBOOST[workout];if(!a)return null;const o=PROFILE.overrides&&PROFILE.overrides[a.id];return o?Object.assign({},a,o,{id:a.id,star:0}):a;}
 function poseId(ex){return ex.pattern?(PATTERN_POSE[ex.pattern]||""):ex.id;}
 function esc(s){return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
 
@@ -961,7 +986,7 @@ function gearAdvice(){
   return tips;
 }
 /* ===================== exercise bank (offline AI-free swaps) ===================== */
-const EX_CAT={a1:"quads",a2:"hamstrings",a3:"quads",a4:"calves",a5:"forearms",b1:"chest",b2:"chest",b3:"shoulders",b4:"sidedelts",c1:"back",c2:"back",c3:"biceps",c4:"reardelts",c5:"forearms",d1:"posterior",d2:"quads",d3:"chest",d4:"core",d5:"core",a6:"quads",a7:"posterior",b5:"chest",b6:"chest",c6:"biceps",c7:"back",d6:"quads",d7:"core"};
+const EX_CAT={a1:"quads",a2:"hamstrings",a3:"quads",a4:"calves",a5:"forearms",b1:"chest",b2:"chest",b3:"shoulders",b4:"sidedelts",c1:"back",c2:"back",c3:"biceps",c4:"reardelts",c5:"forearms",d1:"posterior",d2:"quads",d3:"chest",d4:"core",d5:"core",a6:"quads",a7:"posterior",b5:"chest",b6:"chest",c6:"biceps",c7:"back",d6:"quads",d7:"core",a8:"triceps",b7:"biceps",c8:"triceps",d8:"biceps"};
 /* Curated YouTube form-demo clips (video IDs). Exercises not listed here open a YouTube search on tap. */
 const YT={a1:"2C-uNgKwPLE",a2:"Uc5rP5xs7qQ",b1:"WDIpL0pjun0",d3:"WDIpL0pjun0",c3:"in7PaeYlhrM",d1:"sSESeQAir2M"};
 function exMedia(ex){
@@ -1285,6 +1310,20 @@ function renderExList(){
       list.appendChild(add);
     }
   }
+  const arm=armEx(S.workout);
+  if(arm){
+    if(S.armboost){
+      const hdr=document.createElement("div");hdr.className="armhdr";hdr.innerHTML="💪 ARM BOOST<span>one extra move to build arm mass</span>";list.appendChild(hdr);
+      list.appendChild(exCard(arm));
+      const rm=document.createElement("button");rm.className="armrm";rm.type="button";rm.textContent="Remove arm boost";
+      rm.onclick=()=>{const a=S.sets[arm.id];const hasReps=a&&a.some(v=>+v>0);if(hasReps&&!confirm("Remove the arm boost and clear its logged reps?"))return;delete S.sets[arm.id];S.armboost=false;persist(currentDate);renderToday();};
+      list.appendChild(rm);
+    } else {
+      const add=document.createElement("button");add.className="armadd";add.type="button";add.innerHTML="💪 Add arm boost — build arm mass";
+      add.onclick=()=>{S.armboost=true;persist(currentDate);renderToday();};
+      list.appendChild(add);
+    }
+  }
   list.querySelectorAll("input[data-ex]").forEach(inp=>{
     inp.addEventListener("input",()=>{
       const id=inp.dataset.ex,s=+inp.dataset.set;
@@ -1302,7 +1341,7 @@ function renderFinish(){const b=document.getElementById("finishBtn");b.classList
 function renderToday(){const wl=document.getElementById("whoLine");if(wl)wl.textContent=(PROFILE.name||(ME?ME.name:""))+(PROFILE.height?" · "+PROFILE.height:"")+(PROFILE.weight?" · "+PROFILE.weight:"");document.getElementById("todayDate").textContent=fmtNice(currentDate);renderDayNav();renderSessionBar();renderDaySwitch();renderExList();renderRing();renderCreatine();renderFinish();updateStreakLine();}
 
 function dayLogged(k){const e=DB[k];if(!e)return false;return normalizeEntry(e).sessions.some(sessLogged);}
-function exNamesFor(workout){const m={};const P=PROGRAM[workout];if(P){(P.ex||[]).forEach(x=>{m[x.id]=x.name;});(P.bonus||[]).forEach(x=>{m[x.id]=x.name;});}try{dayEx(workout).forEach(x=>{if(x&&x.id)m[x.id]=x.name;});bonusEx(workout).forEach(x=>{if(x&&x.id)m[x.id]=x.name;});}catch(e){}return m;}
+function exNamesFor(workout){const m={};const P=PROGRAM[workout];if(P){(P.ex||[]).forEach(x=>{m[x.id]=x.name;});(P.bonus||[]).forEach(x=>{m[x.id]=x.name;});}if(ARMBOOST[workout])m[ARMBOOST[workout].id]=ARMBOOST[workout].name;try{dayEx(workout).forEach(x=>{if(x&&x.id)m[x.id]=x.name;});bonusEx(workout).forEach(x=>{if(x&&x.id)m[x.id]=x.name;});const a=armEx(workout);if(a)m[a.id]=a.name;}catch(e){}return m;}
 function showDayDetail(k){
   const e=DB[k];if(!e)return;
   const n=normalizeEntry(e);
@@ -1313,7 +1352,7 @@ function showDayDetail(k){
     const wk=P?(P.tag+" · "+P.name):("Day "+s.workout);
     const names=exNamesFor(s.workout);
     let rows="";
-    const order=P?(P.ex||[]).map(x=>x.id).concat((P.bonus||[]).map(x=>x.id)):[];
+    const order=P?(P.ex||[]).map(x=>x.id).concat((P.bonus||[]).map(x=>x.id)).concat(ARMBOOST[s.workout]?[ARMBOOST[s.workout].id]:[]):[];
     const ids=Object.keys(s.sets||{});
     ids.sort((a,b)=>{const ia=order.indexOf(a),ib=order.indexOf(b);return (ia<0?99:ia)-(ib<0?99:ib);});
     ids.forEach(id=>{
