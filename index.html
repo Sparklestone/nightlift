@@ -167,15 +167,6 @@
   .chartmeta{display:flex;justify-content:space-between;gap:8px;margin-top:8px;font-size:12px;color:var(--muted);flex-wrap:wrap}
   .chartmeta b{color:var(--ink);font-weight:800}
   .chartmeta .cmdelta{font-weight:800}
-  .froutine{margin:12px 0 0;padding:0;list-style:none;counter-reset:fr}
-  .froutine li{position:relative;padding:10px 0 10px 34px;border-top:1px solid var(--line);font-size:14px;line-height:1.5;color:var(--muted);counter-increment:fr}
-  .froutine li:first-child{border-top:none}
-  .froutine li:before{content:counter(fr);position:absolute;left:0;top:10px;width:22px;height:22px;border-radius:50%;background:var(--panel-2);border:1px solid var(--line);color:var(--gold);font-family:'Anton';font-size:12px;display:flex;align-items:center;justify-content:center}
-  .froutine li b{color:var(--ink)}
-  .facetrack{display:flex;gap:10px}
-  .ftbtn{flex:1;background:var(--panel-2);border:1px solid var(--line);color:var(--ink);font-family:inherit;font-weight:800;font-size:15px;padding:14px;border-radius:12px;cursor:pointer}
-  .ftbtn.on{border-color:var(--good);color:var(--good);background:rgba(126,224,166,.1)}
-  .ftbtn:active{transform:scale(.98)}
 
   .lib-day h3{font-family:'Anton';font-size:17px;letter-spacing:.02em;margin:14px 0 2px;display:flex;align-items:center;gap:9px}
   .lib-day h3 i{font-style:normal;font-family:'Hanken Grotesk';font-size:11px;font-weight:700;color:var(--ember);letter-spacing:.16em;text-transform:uppercase}
@@ -533,43 +524,6 @@
     <button id="logoutBottom" type="button" class="finish" style="background:var(--panel);color:var(--ember);border:1px solid var(--line)">LOG OUT</button>
   </section>
 
-  <!-- ===================== RESIST ===================== -->
-  <section id="view-face" class="hide">
-    <div class="card">
-      <span class="eyebrow">Today&#39;s routine</span>
-      <div id="faceTrack" class="facetrack"></div>
-      <p class="note" style="margin-top:10px">Two minutes, morning and night. Tap AM/PM once you&#39;ve done it — same daily habit idea as your lifts. Resets each day.</p>
-    </div>
-
-    <div class="card">
-      <span class="eyebrow">☀️ Morning</span>
-      <ol class="froutine">
-        <li><b>Rinse or gently cleanse.</b> In dry weather you can just splash lukewarm water in the AM; use the CeraVe only if your skin feels oily or you sweated overnight. Over-cleansing strips moisture.</li>
-        <li><b>Hyaluronic acid serum.</b> 3–4 drops onto damp skin — this matters most in dry air, since the serum needs water to grab onto.</li>
-        <li><b>Tallow balm.</b> Thin layer, pressed in over the serum to seal it.</li>
-        <li><b>Sunscreen.</b> Last step, always. At Colorado altitude UV is strong even in winter and on cloudy days.</li>
-      </ol>
-    </div>
-
-    <div class="card">
-      <span class="eyebrow">🌙 Evening</span>
-      <ol class="froutine">
-        <li><b>Cleanse.</b> CeraVe Hydrating Cleanser to remove the day&#39;s sunscreen, dirt, and buildup.</li>
-        <li><b>Hyaluronic acid serum.</b> Again on damp skin, 3–4 drops.</li>
-        <li><b>Tallow balm.</b> A slightly heavier scoop is fine at night — it works as an overnight barrier-repair layer while you sleep.</li>
-      </ol>
-    </div>
-
-    <div class="card">
-      <span class="eyebrow">✨ Weekly</span>
-      <p class="note" style="margin-top:8px">A gentle exfoliant <b>1–2× a week</b> — no more. Skip it on any day your skin feels raw or wind-burned.</p>
-    </div>
-
-    <div class="card">
-      <span class="eyebrow">Make or break it</span>
-      <p class="note" style="margin-top:8px">• <b>Damp skin, both times.</b> Serum on damp, balm to seal — the single biggest lever in a dry climate.<br>• <b>Thinnest to thickest.</b> Water-based serum first, oil-based balm last (before SPF in the AM).<br>• <b>Give the balm 2–3 weeks</b> before judging it — barrier repair isn&#39;t instant.<br>• <b>Reapply sunscreen</b> if you&#39;re outside for long stretches, especially skiing — snow reflects UV right back at you.</p>
-    </div>
-  </section>
   <section id="view-food" class="hide">
     <div class="card">
       <span class="eyebrow">Today's fuel</span>
@@ -652,7 +606,6 @@
   <button data-view="today" class="on"><span class="ico">🔥</span>Tonight</button>
   <button data-view="progress"><span class="ico">📈</span>Progress</button>
   <button data-view="crew"><span class="ico">👥</span>Crew</button>
-  <button data-view="face"><span class="ico">🧴</span>Face</button>
   <button data-view="food"><span class="ico">🍗</span>Food</button>
   <button data-view="body"><span class="ico">⚖️</span>Body</button>
 </nav>
@@ -1801,18 +1754,6 @@ async function logFood(item,p,c,cal,sug,fat){
 }
 async function delFood(row){FOOD=FOOD.filter(r=>r!==row);saveFoodLocal();renderFood();if(cloud&&row.id){try{await sb.from(T_FOOD).delete().eq("id",row.id);}catch(e){console.warn("food del",e);}}}
 function editGoals(){const g=foodGoals();const p=prompt("Daily protein goal (grams):",g.p);if(p===null)return;const c=prompt("Daily carb goal (grams):",g.c);if(c===null)return;const fat=prompt("Daily fat goal (grams):",g.fat);if(fat===null)return;const sug=prompt("Daily sugar cap — stay under (grams):",g.sug);if(sug===null)return;const cal=prompt("Daily calorie cap — stay under (calories):",g.cal);if(cal===null)return;saveGoals({p:Math.max(0,parseInt(p)||g.p),c:Math.max(0,parseInt(c)||g.c),fat:Math.max(0,parseInt(fat)||g.fat),sug:Math.max(0,parseInt(sug)||g.sug),cal:Math.max(0,parseInt(cal)||g.cal)});renderFood();}
-/* ===================== FACE (skincare routine + daily check-off) ===================== */
-function faceKey(){return "nightlift_face_"+(ME?ME.id:"anon");}
-function loadFaceState(){let s=null;try{s=JSON.parse(store.get(faceKey()));}catch(e){}if(!s||typeof s!=="object"||s.date!==today())s={date:today(),am:false,pm:false};return s;}
-function saveFaceState(s){try{store.set(faceKey(),JSON.stringify(s));}catch(e){}}
-function renderFace(){
-  const el=document.getElementById("faceTrack");if(!el)return;
-  const s=loadFaceState();
-  el.innerHTML='<button class="ftbtn'+(s.am?" on":"")+'" id="ftAM" type="button">'+(s.am?"✓ ":"")+'☀️ AM done</button>'+
-               '<button class="ftbtn'+(s.pm?" on":"")+'" id="ftPM" type="button">'+(s.pm?"✓ ":"")+'🌙 PM done</button>';
-  document.getElementById("ftAM").onclick=()=>{const st=loadFaceState();st.am=!st.am;saveFaceState(st);renderFace();};
-  document.getElementById("ftPM").onclick=()=>{const st=loadFaceState();st.pm=!st.pm;saveFaceState(st);renderFace();};
-}
 /* ===================== BODY (weight + waist trend) ===================== */
 function bodyKey(){return "nightlift_body_"+(ME?ME.id:"anon");}
 function loadBody(){try{BODY=JSON.parse(store.get(bodyKey()))||[];}catch(e){BODY=[];}if(!Array.isArray(BODY))BODY=[];sortBody();}
@@ -1992,7 +1933,7 @@ document.getElementById("resetBtn").onclick=async()=>{
 };
 
 /* ===================== tabs ===================== */
-document.querySelectorAll("nav.tabs button").forEach(btn=>{btn.onclick=()=>{if(typeof clearSurf==="function")clearSurf();document.querySelectorAll("nav.tabs button").forEach(b=>b.classList.remove("on"));btn.classList.add("on");const v=btn.dataset.view;["today","progress","crew","face","food","body"].forEach(id=>document.getElementById("view-"+id).classList.toggle("hide",id!==v));if(v==="today"){openDay();renderToday();}if(v==="progress")renderProgress();if(v==="crew")renderCrew();if(v==="face")renderFace();if(v==="food")renderFood();if(v==="body")renderBody();window.scrollTo({top:0,behavior:"smooth"});};});
+document.querySelectorAll("nav.tabs button").forEach(btn=>{btn.onclick=()=>{if(typeof clearSurf==="function")clearSurf();document.querySelectorAll("nav.tabs button").forEach(b=>b.classList.remove("on"));btn.classList.add("on");const v=btn.dataset.view;["today","progress","crew","food","body"].forEach(id=>document.getElementById("view-"+id).classList.toggle("hide",id!==v));if(v==="today"){openDay();renderToday();}if(v==="progress")renderProgress();if(v==="crew")renderCrew();if(v==="food")renderFood();if(v==="body")renderBody();window.scrollTo({top:0,behavior:"smooth"});};});
 
 /* crew controls */
 function renderGear(){const g=document.getElementById("gearTips");if(!g)return;g.innerHTML=gearAdvice().map(t=>'<p class="note" style="margin-top:8px">• '+t+'</p>').join('');}
