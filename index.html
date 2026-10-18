@@ -102,6 +102,12 @@
   .setpill.amrap label{color:var(--ember)}
   .setpill input{width:100%;background:transparent;border:none;color:var(--ink);text-align:center;font-family:'Anton';font-size:18px;outline:none}
   .setpill input::-webkit-outer-spin-button,.setpill input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .setpill .wt{display:flex;align-items:baseline;justify-content:center;gap:2px;width:100%;margin-top:4px;padding-top:4px;border-top:1px solid var(--line)}
+  .setpill .wtin{width:26px;background:transparent;border:none;color:var(--muted);text-align:right;font-family:'Anton';font-size:13px;outline:none;padding:0}
+  .setpill .wtin::-webkit-outer-spin-button,.setpill .wtin::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .setpill .wtin.up{color:var(--gold)}
+  .setpill .wtin.down{color:#7bd1e0}
+  .setpill .wtu{font-size:8.5px;letter-spacing:.03em;color:var(--faint);text-transform:uppercase}
   .setrow .lg{font-size:10.5px;color:var(--muted);margin-left:2px}
 
   .toggle{display:flex;align-items:center;gap:13px;cursor:pointer}
@@ -1155,6 +1161,8 @@ function adapt(ex){
   }
 }
 function parseWeights(str){const seen={};return String(str||"").split(/[^0-9.]+/).map(s=>parseFloat(s)).filter(n=>!isNaN(n)&&n>0).filter(n=>seen[n]?false:(seen[n]=1)).sort((a,b)=>a-b);}
+/* recommended per-hand weight parsed from a load string ("2×10 DB" -> 10 DB; "25 KB" -> 25 KB; "Bodyweight" -> null) */
+function recWeight(load){const m=String(load||"").match(/(?:\d+\s*[×x]\s*)?(\d+(?:\.\d+)?)\s*(DB|KB|lb)/i);if(!m)return null;return{n:parseFloat(m[1]),unit:m[2].toLowerCase()};}
 function gearAdvice(){
   const kb=ownedKB(),db=ownedDB(),tips=[];
   let high=0,total=0;
@@ -1510,10 +1518,18 @@ function exCard(ex){
   const stalled=!ex.replaced&&isStalled(ex.id);
   const isDone=saved.some(v=>+v>0);
   const el=document.createElement("div");el.className="ex"+(isDone?" done":"")+(stalled?" stalled open":"");
+  const rw=recWeight(A.load);
+  const savedW=(S.wts&&S.wts[ex.id])||[];
   let sets="";
   for(let s=0;s<ex.sets;s++){
     const isLast=ex.amrap&&s===ex.sets-1;
-    sets+='<div class="setpill'+(isLast?' amrap':'')+'"><label>'+(isLast?'Failure':'Set '+(s+1))+'</label><input type="number" inputmode="numeric" min="0" data-ex="'+ex.id+'" data-set="'+s+'" value="'+(saved[s]||"")+'" placeholder="'+(isLast?'MAX':repTarget(A.reps))+'"></div>';
+    let wt="";
+    if(rw){
+      const sv=(savedW[s]!=null&&savedW[s]!=="")?savedW[s]:"";
+      const cls=(sv!==""&&+sv>rw.n)?" up":((sv!==""&&+sv<rw.n)?" down":"");
+      wt='<div class="wt"><input class="wtin'+cls+'" type="number" inputmode="decimal" min="0" step="2.5" data-exw="'+ex.id+'" data-setw="'+s+'" value="'+sv+'" placeholder="'+rw.n+'"><span class="wtu">'+esc(rw.unit)+'</span></div>';
+    }
+    sets+='<div class="setpill'+(isLast?' amrap':'')+'"><label>'+(isLast?'Failure':'Set '+(s+1))+'</label><input type="number" inputmode="numeric" min="0" data-ex="'+ex.id+'" data-set="'+s+'" value="'+(saved[s]||"")+'" placeholder="'+(isLast?'MAX':repTarget(A.reps))+'">'+wt+'</div>';
   }
   el.innerHTML=
     '<div class="ex-head">'+
@@ -1528,7 +1544,7 @@ function exCard(ex){
       (ex.tech?'<div class="tech"><b>Coach:</b> '+esc(ex.tech)+'</div>':'')+
       (ex.prog?'<div class="prog"><b>Level up:</b> '+esc(ex.prog)+'</div>':'')+
       (stalled?'<div class="stall"><b>⚠ Plateau check.</b> This lift\u2019s looked flat about 3 sessions. Same exercise no longer adding reps usually means it\u2019s time for a 4–6 week rotation. <div class="stallbtns"><button class="stallgo" type="button">Rotate it</button><button class="stallkeep" type="button">Keep pushing it</button></div></div>':'')+
-      '<div class="setrow">'+sets+'<span class="lg">grey = target · tap to log actual</span></div>'+
+      '<div class="setrow">'+sets+'<span class="lg">top = reps · bottom = weight · grey is your target, change it if you went heavier or lighter</span></div>'+
       '<div class="exbtns"><button class="ex-replace" type="button">↻ Replace</button>'+(ex.replaced?'<button class="ex-reset" type="button">Undo swap</button>':'')+'</div>'+
     '</div></div>';
   el.querySelector(".ex-head").onclick=e=>{if(e.target.closest(".ex-check"))return;el.classList.toggle("open");};
@@ -1592,6 +1608,19 @@ function renderExList(){
       if(!S.sets[id])S.sets[id]=Array(n).fill("");
       S.sets[id][s]=inp.value;
       persist(currentDate);renderRing();updateStreakLine();refreshChecks();
+    });
+  });
+  list.querySelectorAll("input[data-exw]").forEach(inp=>{
+    inp.addEventListener("input",()=>{
+      const id=inp.dataset.exw,s=+inp.dataset.setw;
+      const f=shownEx().find(e=>e.id===id); const n=f?f.sets:3;
+      if(!S.wts)S.wts={};
+      if(!S.wts[id])S.wts[id]=Array(n).fill("");
+      S.wts[id][s]=inp.value;
+      const rw=f?recWeight(adapt(f).load):null;
+      inp.classList.remove("up","down");
+      if(rw&&inp.value!==""){ if(+inp.value>rw.n)inp.classList.add("up"); else if(+inp.value<rw.n)inp.classList.add("down"); }
+      persist(currentDate);
     });
   });
   initFigs();
