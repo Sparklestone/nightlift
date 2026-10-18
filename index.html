@@ -952,7 +952,37 @@ const ARMBOOST={
      tech:"Loads the biceps on the way up and the forearms on the way down — builds the whole arm and your grip in one move.",
      prog:"Slow the palms-down lowering — that eccentric is the mass-builder."}
 };
-function armEx(workout){const a=ARMBOOST[workout];if(!a)return null;const o=PROFILE.overrides&&PROFILE.overrides[a.id];const base=o?Object.assign({},a,o,{id:a.id,star:0}):a;return applyFocus(base);}
+const LEGBOOST={
+  A:{id:"la",name:"DB Hip Thrust",musc:"Glutes · hamstrings",load:"2×10 DB",sets:3,reps:"12–15",amrap:true,pattern:"hinge",
+     cues:["Shoulders on a couch edge, a dumbbell across the hips, feet flat.","Drive through the heels and thrust the hips up, squeeze the glutes hard.","Lower slow, don't rest the hips down between reps."],
+     tech:"The single best direct glute builder — the top squeeze is where the shape comes from.",prog:"1-sec hold at the top, then go heavier."},
+  B:{id:"lb",name:"DB Reverse Lunge",musc:"Quads · glutes",load:"2×10 DB",sets:3,reps:"10–12 / leg",amrap:true,pattern:"lunge",
+     cues:["A dumbbell in each hand, step back and drop the back knee.","Stay tall, push through the front heel to stand.","Alternate legs under control."],
+     tech:"Extra lower-body volume on a push day — joint-friendly and great for balance.",prog:"Slow the descent, then elevate the front foot."},
+  C:{id:"lc",name:"DB Romanian Deadlift",musc:"Hamstrings · glutes",load:"2×10 DB",sets:3,reps:"12–15",amrap:true,pattern:"hinge",
+     cues:["A dumbbell in each hand against the thighs, soft knees.","Push the hips back, bells skim the legs, flat back.","Drive the hips forward to stand, squeeze the glutes."],
+     tech:"Loads the hamstrings through a big stretch — the main driver of hamstring size.",prog:"Slow the lower to 3 sec, then go heavier."},
+  D:{id:"ld",name:"Goblet Squat",musc:"Quads · glutes",load:"25 KB",sets:3,reps:"15–20",amrap:true,pattern:"squat",
+     cues:["Bell at the chest, sit down between the hips.","3-sec descent, chest tall, knees tracking over the toes.","Drive up through the heels."],
+     tech:"Extra quad-and-glute volume to round out the legs.",prog:"Add a 2-sec pause at the bottom."}
+};
+const COREBOOST={
+  A:{id:"ka",name:"Plank",musc:"Core",load:"Bodyweight",sets:3,reps:"30–60 sec",pattern:"plank",
+     cues:["Forearms down, body in one straight line.","Squeeze the glutes and brace the abs hard.","No sagging or piking — hold steady."],
+     tech:"Builds deep core stability that protects the low back.",prog:"Add 10 sec, then try a long-lever plank."},
+  B:{id:"kb",name:"Lying Leg Raise",musc:"Lower abs · core",load:"Bodyweight",sets:3,reps:"12–15",amrap:true,pattern:"plank",
+     cues:["On your back, hands tucked under the hips.","Legs straight, raise them to vertical.","Lower slow — don't let the heels touch the floor."],
+     tech:"Targets the lower abs, the stubborn lower-belly area.",prog:"Add a pause at the top, then progress to hanging raises."},
+  C:{id:"kc",name:"Russian Twist",musc:"Obliques · core",load:"25 KB or 10 DB",sets:3,reps:"20 / side",amrap:true,pattern:"plank",
+     cues:["Sit back at ~45°, feet up or heels down, hold a weight at the chest.","Rotate the torso to tap the weight beside each hip.","Move from the waist, not just the arms."],
+     tech:"Hits the obliques for a tighter, stronger midsection.",prog:"Lift the feet, then go heavier."},
+  D:{id:"kd",name:"Dead Bug",musc:"Core · anti-extension",load:"Bodyweight",sets:3,reps:"10 / side",pattern:"plank",
+     cues:["On your back, arms up, knees bent over the hips.","Lower the opposite arm and leg slowly, low back pressed to the floor.","Return and switch sides. Never let the back arch."],
+     tech:"Teaches the core to brace — safer and more carryover than crunches.",prog:"Slow the reach, then add a light weight in the hands."}
+};
+const FBOOST={arms:ARMBOOST,legs:LEGBOOST,core:COREBOOST};
+function topFocusRegion(){const f=PROFILE.fit;if(!f||!f.focus||!f.focus.set)return "arms";const fo=f.focus;const arr=[["arms",+fo.arms||0],["legs",+fo.legs||0],["core",+fo.core||0]].sort((a,b)=>b[1]-a[1]);return arr[0][1]>0?arr[0][0]:"arms";}
+function armEx(workout){const region=topFocusRegion();const a=(FBOOST[region]||ARMBOOST)[workout];if(!a)return null;const o=PROFILE.overrides&&PROFILE.overrides[a.id];return o?Object.assign({},a,o,{id:a.id,star:0}):a;}
 function poseId(ex){return ex.pattern?(PATTERN_POSE[ex.pattern]||""):ex.id;}
 function esc(s){return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
 
@@ -1010,7 +1040,7 @@ function gearAdvice(){
   return tips;
 }
 /* ===================== exercise bank (offline AI-free swaps) ===================== */
-const EX_CAT={a1:"quads",a2:"hamstrings",a3:"quads",a4:"calves",a5:"forearms",b1:"chest",b2:"chest",b3:"shoulders",b4:"sidedelts",c1:"back",c2:"back",c3:"biceps",c4:"reardelts",c5:"forearms",d1:"posterior",d2:"quads",d3:"chest",d4:"core",d5:"core",a6:"quads",a7:"posterior",b5:"chest",b6:"chest",c6:"biceps",c7:"back",d6:"quads",d7:"core",a8:"triceps",b7:"biceps",c8:"triceps",d8:"biceps"};
+const EX_CAT={a1:"quads",a2:"hamstrings",a3:"quads",a4:"calves",a5:"forearms",b1:"chest",b2:"chest",b3:"shoulders",b4:"sidedelts",c1:"back",c2:"back",c3:"biceps",c4:"reardelts",c5:"forearms",d1:"posterior",d2:"quads",d3:"chest",d4:"core",d5:"core",a6:"quads",a7:"posterior",b5:"chest",b6:"chest",c6:"biceps",c7:"back",d6:"quads",d7:"core",a8:"triceps",b7:"biceps",c8:"triceps",d8:"biceps",la:"posterior",lb:"quads",lc:"hamstrings",ld:"quads",ka:"core",kb:"core",kc:"core",kd:"core"};
 /* ---- focus areas: arms / legs / core sliders (sum 100) scale set volume per region ---- */
 const REGION_OF={quads:"legs",hamstrings:"legs",calves:"legs",posterior:"legs",glutes:"legs",biceps:"arms",triceps:"arms",forearms:"arms",core:"core"};
 function focusSet(){const f=PROFILE.fit;return !!(f&&f.focus&&f.focus.set);}
@@ -1341,14 +1371,16 @@ function renderExList(){
   }
   const arm=armEx(S.workout);
   if(arm){
+    const reg=topFocusRegion();
+    const BL={arms:["💪","ARM BOOST","build arm mass","Add arm boost — build arm mass"],legs:["🦵","LEG BOOST","build legs & glutes","Add leg boost — legs & glutes"],core:["🧍","CORE BOOST","build your core","Add core boost — build your core"]}[reg];
     if(S.armboost){
-      const hdr=document.createElement("div");hdr.className="armhdr";hdr.innerHTML="💪 ARM BOOST<span>one extra move to build arm mass</span>";list.appendChild(hdr);
+      const hdr=document.createElement("div");hdr.className="armhdr";hdr.innerHTML=BL[0]+" "+BL[1]+"<span>one extra move to "+BL[2]+"</span>";list.appendChild(hdr);
       list.appendChild(exCard(arm));
-      const rm=document.createElement("button");rm.className="armrm";rm.type="button";rm.textContent="Remove arm boost";
-      rm.onclick=()=>{const a=S.sets[arm.id];const hasReps=a&&a.some(v=>+v>0);if(hasReps&&!confirm("Remove the arm boost and clear its logged reps?"))return;delete S.sets[arm.id];S.armboost=false;persist(currentDate);renderToday();};
+      const rm=document.createElement("button");rm.className="armrm";rm.type="button";rm.textContent="Remove boost";
+      rm.onclick=()=>{const a=S.sets[arm.id];const hasReps=a&&a.some(v=>+v>0);if(hasReps&&!confirm("Remove the boost and clear its logged reps?"))return;delete S.sets[arm.id];S.armboost=false;persist(currentDate);renderToday();};
       list.appendChild(rm);
     } else {
-      const add=document.createElement("button");add.className="armadd";add.type="button";add.innerHTML="💪 Add arm boost — build arm mass";
+      const add=document.createElement("button");add.className="armadd";add.type="button";add.innerHTML=BL[0]+" "+BL[3];
       add.onclick=()=>{S.armboost=true;persist(currentDate);renderToday();};
       list.appendChild(add);
     }
@@ -1370,7 +1402,7 @@ function renderFinish(){const b=document.getElementById("finishBtn");b.classList
 function renderToday(){const wl=document.getElementById("whoLine");if(wl)wl.textContent=(PROFILE.name||(ME?ME.name:""))+(PROFILE.height?" · "+PROFILE.height:"")+(PROFILE.weight?" · "+PROFILE.weight:"");document.getElementById("todayDate").textContent=fmtNice(currentDate);const pf=document.getElementById("planFocus");if(pf){const gf=goalFocus();if(gf){pf.innerHTML="🎯 <b>"+esc(gf.label)+"</b> · "+esc(gf.detail.replace(/^Plan tuned for [^:]+: /,""));pf.classList.remove("hide");}else{pf.classList.add("hide");pf.innerHTML="";}}renderDayNav();renderSessionBar();renderDaySwitch();renderExList();renderRing();renderCreatine();renderFinish();updateStreakLine();}
 
 function dayLogged(k){const e=DB[k];if(!e)return false;return normalizeEntry(e).sessions.some(sessLogged);}
-function exNamesFor(workout){const m={};const P=PROGRAM[workout];if(P){(P.ex||[]).forEach(x=>{m[x.id]=x.name;});(P.bonus||[]).forEach(x=>{m[x.id]=x.name;});}if(ARMBOOST[workout])m[ARMBOOST[workout].id]=ARMBOOST[workout].name;try{dayEx(workout).forEach(x=>{if(x&&x.id)m[x.id]=x.name;});bonusEx(workout).forEach(x=>{if(x&&x.id)m[x.id]=x.name;});const a=armEx(workout);if(a)m[a.id]=a.name;}catch(e){}return m;}
+function exNamesFor(workout){const m={};const P=PROGRAM[workout];if(P){(P.ex||[]).forEach(x=>{m[x.id]=x.name;});(P.bonus||[]).forEach(x=>{m[x.id]=x.name;});}[ARMBOOST,LEGBOOST,COREBOOST].forEach(pool=>{if(pool[workout])m[pool[workout].id]=pool[workout].name;});try{dayEx(workout).forEach(x=>{if(x&&x.id)m[x.id]=x.name;});bonusEx(workout).forEach(x=>{if(x&&x.id)m[x.id]=x.name;});const a=armEx(workout);if(a)m[a.id]=a.name;}catch(e){}return m;}
 function showDayDetail(k){
   const e=DB[k];if(!e)return;
   const n=normalizeEntry(e);
@@ -1381,7 +1413,7 @@ function showDayDetail(k){
     const wk=P?(P.tag+" · "+P.name):("Day "+s.workout);
     const names=exNamesFor(s.workout);
     let rows="";
-    const order=P?(P.ex||[]).map(x=>x.id).concat((P.bonus||[]).map(x=>x.id)).concat(ARMBOOST[s.workout]?[ARMBOOST[s.workout].id]:[]):[];
+    const order=P?(P.ex||[]).map(x=>x.id).concat((P.bonus||[]).map(x=>x.id)).concat([ARMBOOST,LEGBOOST,COREBOOST].map(pl=>pl[s.workout]&&pl[s.workout].id).filter(Boolean)):[];
     const ids=Object.keys(s.sets||{});
     ids.sort((a,b)=>{const ia=order.indexOf(a),ib=order.indexOf(b);return (ia<0?99:ia)-(ib<0?99:ib);});
     ids.forEach(id=>{
