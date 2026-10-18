@@ -530,6 +530,8 @@
       <div class="fseg" id="pfLevel"><button type="button" data-v="new">New<small>easier moves</small></button><button type="button" data-v="return">Returning<small>standard</small></button><button type="button" data-v="pro">Experienced<small>harder</small></button></div>
       <label class="fflabel">Your goals <span>slide what matters most — the plan and food targets follow</span></label>
       <div id="pfGoals"></div>
+      <label class="fflabel">Focus areas <span>arms · legs · core — always totals 100%, adds or trims sets</span></label>
+      <div id="pfFocus"></div>
       <div class="eqgroup">
         <div class="eqhead">Kettlebells <span>up to 3 · single or pair</span></div>
         <div id="kbRows"></div>
@@ -928,8 +930,8 @@ const LEVEL_SWAP={
   d5:{reg:{name:"Knee Plank",load:"Bodyweight",reps:"20–40 sec",pattern:"plank",cues:["Forearms down, knees on the floor, straight line head to knees.","Brace the abs and squeeze the glutes.","Hold steady."],tech:"From the knees first — add seconds, then move to a full plank.",prog:"Straighten the legs for a full plank."}}
 };
 function levelVariant(ex){const f=PROFILE.fit||{};const lvl=f.level;if(!lvl||lvl==="return")return null;const sw=LEVEL_SWAP[ex.id];if(!sw)return null;const v=lvl==="new"?sw.reg:lvl==="pro"?sw.adv:null;if(!v)return null;return Object.assign({},ex,v,{id:ex.id,star:ex.star,lvl:lvl==="new"?"easier":"advanced"});}
-function dayEx(workout){return PROGRAM[workout].ex.map(ex=>{const o=PROFILE.overrides&&PROFILE.overrides[ex.id];if(o)return Object.assign({},ex,o,{id:ex.id,star:0});const lv=levelVariant(ex);return lv||ex;});}
-function bonusEx(workout){const b=PROGRAM[workout]&&PROGRAM[workout].bonus;return Array.isArray(b)?b.map(ex=>{const o=PROFILE.overrides&&PROFILE.overrides[ex.id];return o?Object.assign({},ex,o,{id:ex.id,star:0}):ex;}):[];}
+function dayEx(workout){return PROGRAM[workout].ex.map(ex=>{const o=PROFILE.overrides&&PROFILE.overrides[ex.id];const base=o?Object.assign({},ex,o,{id:ex.id,star:0}):(levelVariant(ex)||ex);return applyFocus(base);});}
+function bonusEx(workout){const b=PROGRAM[workout]&&PROGRAM[workout].bonus;return Array.isArray(b)?b.map(ex=>{const o=PROFILE.overrides&&PROFILE.overrides[ex.id];const base=o?Object.assign({},ex,o,{id:ex.id,star:0}):ex;return applyFocus(base);}):[];}
 function shownEx(){let l=dayEx(S.workout);if(S&&S.bonus)l=l.concat(bonusEx(S.workout));if(S&&S.armboost){const a=armEx(S.workout);if(a)l=l.concat([a]);}return l;}
 /* Arm Boost — one focused arm-mass move per day, rotating biceps/triceps across the week */
 const ARMBOOST={
@@ -950,7 +952,7 @@ const ARMBOOST={
      tech:"Loads the biceps on the way up and the forearms on the way down — builds the whole arm and your grip in one move.",
      prog:"Slow the palms-down lowering — that eccentric is the mass-builder."}
 };
-function armEx(workout){const a=ARMBOOST[workout];if(!a)return null;const o=PROFILE.overrides&&PROFILE.overrides[a.id];return o?Object.assign({},a,o,{id:a.id,star:0}):a;}
+function armEx(workout){const a=ARMBOOST[workout];if(!a)return null;const o=PROFILE.overrides&&PROFILE.overrides[a.id];const base=o?Object.assign({},a,o,{id:a.id,star:0}):a;return applyFocus(base);}
 function poseId(ex){return ex.pattern?(PATTERN_POSE[ex.pattern]||""):ex.id;}
 function esc(s){return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
 
@@ -1009,6 +1011,11 @@ function gearAdvice(){
 }
 /* ===================== exercise bank (offline AI-free swaps) ===================== */
 const EX_CAT={a1:"quads",a2:"hamstrings",a3:"quads",a4:"calves",a5:"forearms",b1:"chest",b2:"chest",b3:"shoulders",b4:"sidedelts",c1:"back",c2:"back",c3:"biceps",c4:"reardelts",c5:"forearms",d1:"posterior",d2:"quads",d3:"chest",d4:"core",d5:"core",a6:"quads",a7:"posterior",b5:"chest",b6:"chest",c6:"biceps",c7:"back",d6:"quads",d7:"core",a8:"triceps",b7:"biceps",c8:"triceps",d8:"biceps"};
+/* ---- focus areas: arms / legs / core sliders (sum 100) scale set volume per region ---- */
+const REGION_OF={quads:"legs",hamstrings:"legs",calves:"legs",posterior:"legs",glutes:"legs",biceps:"arms",triceps:"arms",forearms:"arms",core:"core"};
+function focusSet(){const f=PROFILE.fit;return !!(f&&f.focus&&f.focus.set);}
+function focusMult(region){if(!focusSet()||!region)return 1;const v=+PROFILE.fit.focus[region];if(isNaN(v))return 1;const base=100/3;return Math.min(1.8,Math.max(0.5,1+((v-base)/base)*0.5));}
+function applyFocus(ex){if(!focusSet())return ex;const region=REGION_OF[EX_CAT[ex.id]];if(!region)return ex;const ns=Math.min(5,Math.max(1,Math.round((ex.sets||3)*focusMult(region))));if(ns===ex.sets)return ex;const copy=Object.assign({},ex,{sets:ns});copy.focusDir=ns>ex.sets?"up":"down";return copy;}
 /* Curated YouTube form-demo clips (video IDs). Exercises not listed here open a YouTube search on tap. */
 const YT={a1:"2C-uNgKwPLE",a2:"Uc5rP5xs7qQ",b1:"WDIpL0pjun0",d3:"WDIpL0pjun0",c3:"in7PaeYlhrM",d1:"sSESeQAir2M"};
 function exMedia(ex){
@@ -1284,7 +1291,7 @@ function exCard(ex){
   el.innerHTML=
     '<div class="ex-head">'+
       '<div class="ex-check">✓</div>'+
-      '<div class="ex-name"><div class="t">'+esc(ex.name)+(ex.star?'<span class="star">★ KEY</span>':'')+(ex.replaced?'<span class="star" style="color:var(--good)">⟳ SWAP</span>':'')+(ex.lvl==="easier"?'<span class="star" style="color:#7bd1e0">◗ EASIER</span>':'')+(ex.lvl==="advanced"?'<span class="star" style="color:var(--gold)">▲ ADVANCED</span>':'')+(stalled?'<span class="star" style="color:var(--gold)">⚠ PLATEAU</span>':'')+'</div><div class="m">'+esc(ex.musc)+' · '+ex.sets+' × '+esc(A.reps)+(A.note?' <span style="color:var(--faint)">'+esc(A.note)+'</span>':'')+'</div></div>'+
+      '<div class="ex-name"><div class="t">'+esc(ex.name)+(ex.star?'<span class="star">★ KEY</span>':'')+(ex.replaced?'<span class="star" style="color:var(--good)">⟳ SWAP</span>':'')+(ex.lvl==="easier"?'<span class="star" style="color:#7bd1e0">◗ EASIER</span>':'')+(ex.lvl==="advanced"?'<span class="star" style="color:var(--gold)">▲ ADVANCED</span>':'')+(ex.focusDir==="up"?'<span class="star" style="color:#b9adff">✦ FOCUS</span>':'')+(stalled?'<span class="star" style="color:var(--gold)">⚠ PLATEAU</span>':'')+'</div><div class="m">'+esc(ex.musc)+' · '+ex.sets+' × '+esc(A.reps)+(A.note?' <span style="color:var(--faint)">'+esc(A.note)+'</span>':'')+'</div></div>'+
       '<div class="ex-load">'+esc(A.load).replace(/ /g,'&nbsp;')+'<small>LOAD</small></div>'+
       '<div class="chev">▶</div>'+
     '</div>'+
@@ -2031,13 +2038,27 @@ function buildFitRows(){
   const host=document.getElementById("pfGoals");
   if(host){const G=f.goals||{};host.innerHTML=GOAL_SLIDERS.map(s=>'<div class="gslider"><div class="gstop"><span>'+s[1]+'</span><b id="gval-'+s[0]+'">'+(+G[s[0]]||0)+'</b></div><input type="range" min="0" max="100" step="5" id="gs-'+s[0]+'" data-g="'+s[0]+'" value="'+(+G[s[0]]||0)+'"></div>').join('');
     host.querySelectorAll('input[type="range"]').forEach(inp=>inp.oninput=()=>{const v=document.getElementById("gval-"+inp.dataset.g);if(v)v.textContent=inp.value;});}
+  buildFocusRows();
 }
+const DEF_FOCUS={arms:34,legs:33,core:33};
+let _focusVals={arms:34,legs:33,core:33};
+function fmtFocusUI(){["arms","legs","core"].forEach(k=>{const s=document.getElementById("fc-"+k),v=document.getElementById("fcv-"+k);if(s&&document.activeElement!==s)s.value=_focusVals[k];if(v)v.textContent=_focusVals[k]+"%";});}
+function rebalanceFocus(changed,val){val=Math.max(0,Math.min(100,Math.round(val)));const others=["arms","legs","core"].filter(k=>k!==changed);const rem=100-val;const oldSum=_focusVals[others[0]]+_focusVals[others[1]];let a;if(oldSum<=0)a=Math.round(rem/2);else a=Math.round(rem*_focusVals[others[0]]/oldSum);a=Math.max(0,Math.min(rem,a));const b=rem-a;_focusVals[changed]=val;_focusVals[others[0]]=a;_focusVals[others[1]]=b;fmtFocusUI();}
+function buildFocusRows(){
+  const f=(PROFILE.fit&&PROFILE.fit.focus)||null;
+  _focusVals=f&&typeof f.arms==="number"?{arms:+f.arms||0,legs:+f.legs||0,core:+f.core||0}:{arms:34,legs:33,core:33};
+  const host=document.getElementById("pfFocus");if(!host)return;
+  const R=[["arms","💪 Arms"],["legs","🦵 Legs"],["core","🧍 Core"]];
+  host.innerHTML=R.map(r=>'<div class="gslider"><div class="gstop"><span>'+r[1]+'</span><b id="fcv-'+r[0]+'">'+_focusVals[r[0]]+'%</b></div><input type="range" min="0" max="100" step="1" id="fc-'+r[0]+'" data-f="'+r[0]+'" value="'+_focusVals[r[0]]+'"></div>').join('');
+  host.querySelectorAll('input[type="range"]').forEach(inp=>inp.oninput=()=>rebalanceFocus(inp.dataset.f,+inp.value));
+}
+function readFocus(){const v=_focusVals||DEF_FOCUS;const neutral=v.arms===DEF_FOCUS.arms&&v.legs===DEF_FOCUS.legs&&v.core===DEF_FOCUS.core;return {arms:v.arms,legs:v.legs,core:v.core,set:!neutral};}
 function readFit(){
   const sexOn=document.querySelector("#pfSex button.on"),btOn=document.querySelector("#pfBody button.on");
   const goals={};GOAL_SLIDERS.forEach(s=>{const inp=document.getElementById("gs-"+s[0]);goals[s[0]]=inp?+inp.value||0:0;});
   const lvlOn=document.querySelector("#pfLevel button.on");
   const anyGoal=Object.values(goals).some(v=>v>0);
-  return {set:anyGoal,sex:sexOn?sexOn.dataset.v:(PROFILE.fit&&PROFILE.fit.sex)||"male",bodytype:btOn?btOn.dataset.v:(PROFILE.fit&&PROFILE.fit.bodytype)||"average",level:lvlOn?lvlOn.dataset.v:(PROFILE.fit&&PROFILE.fit.level)||"return",goals:goals};
+  return {set:anyGoal,sex:sexOn?sexOn.dataset.v:(PROFILE.fit&&PROFILE.fit.sex)||"male",bodytype:btOn?btOn.dataset.v:(PROFILE.fit&&PROFILE.fit.bodytype)||"average",level:lvlOn?lvlOn.dataset.v:(PROFILE.fit&&PROFILE.fit.level)||"return",goals:goals,focus:readFocus()};
 }
 document.querySelectorAll("#kindSeg button").forEach(b=>b.onclick=()=>{document.querySelectorAll("#kindSeg button").forEach(x=>x.classList.remove("on"));b.classList.add("on");});
 document.getElementById("msgSend").onclick=sendMsg;
