@@ -284,6 +284,13 @@
   .fseg button small{font-size:10px;color:var(--faint);font-weight:600}
   .fseg button.on{border-color:var(--ember);color:var(--ember);background:rgba(255,106,61,.1)}
   .fseg button.on small{color:var(--ember)}
+  .fgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:7px}
+  .pchip{background:var(--panel-2);border:1px solid var(--line);color:var(--ink);font-family:inherit;padding:11px 10px;border-radius:12px;cursor:pointer;display:flex;flex-direction:column;gap:2px;text-align:left;line-height:1.15}
+  .pchip b{font-size:14px;font-weight:800}
+  .pchip small{font-size:11px;color:var(--faint);font-weight:600}
+  .pchip.on{border-color:var(--ember);background:rgba(255,106,61,.1)}
+  .pchip.on b{color:var(--ember)}
+  .pchip.on small{color:var(--ember)}
   .gslider{margin-top:11px}
   .gstop{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;color:var(--ink);font-weight:700;margin-bottom:3px}
   .gstop b{font-family:'Anton';color:var(--gold);font-size:15px;font-weight:400}
@@ -528,8 +535,8 @@
       <div class="fseg" id="pfBody"><button type="button" data-v="lean">Lean<small>slim</small></button><button type="button" data-v="average">Average<small>mid</small></button><button type="button" data-v="broad">Broad<small>stocky</small></button></div>
       <label class="fflabel">Training level <span>sets which exercise variations you get</span></label>
       <div class="fseg" id="pfLevel"><button type="button" data-v="new">New<small>easier moves</small></button><button type="button" data-v="return">Returning<small>standard</small></button><button type="button" data-v="pro">Experienced<small>harder</small></button></div>
-      <label class="fflabel">Your goals <span>slide what matters most — the plan and food targets follow</span></label>
-      <div id="pfGoals"></div>
+      <label class="fflabel">Target physique <span>the look you're building toward — sets your food targets</span></label>
+      <div class="fgrid" id="pfPhys"></div>
       <label class="fflabel">Focus areas <span>arms · legs · core — always totals 100%, adds or trims sets</span></label>
       <div id="pfFocus"></div>
       <div class="eqgroup">
@@ -1833,39 +1840,41 @@ function goalKey(){return "nightlift_goals_"+(ME?ME.id:"anon");}
 function loadFood(){try{FOOD=JSON.parse(store.get(foodKey()))||[];}catch(e){FOOD=[];}}
 function saveFoodLocal(){try{store.set(foodKey(),JSON.stringify(FOOD.slice(-1500)));}catch(e){}}
 /* ---- goal profile: sex, body type, and goal sliders drive food + reps ---- */
-function fitSet(){const f=PROFILE.fit;return !!(f&&f.set);}
-function fitGoals(){const f=PROFILE.fit||{};const G=f.goals||{};return {loss:(+G.loss||0)/100,tone:(+G.tone||0)/100,strength:(+G.strength||0)/100,mass:(+G.mass||0)/100,flex:(+G.flex||0)/100};}
+/* ---- target physique → calorie direction, protein, and rep style (nothing excessive) ---- */
+const PHYSIQUES={
+  thin:          {label:"Thin",          desc:"lean & light",     cf:0.80, ppl:0.75, fpl:0.30, sug:40, rf:1.18},
+  thin_athletic: {label:"Thin athletic", desc:"lean & toned",     cf:0.88, ppl:0.90, fpl:0.30, sug:40, rf:1.12},
+  fit_average:   {label:"Fit average",   desc:"healthy everyday",  cf:0.95, ppl:0.80, fpl:0.35, sug:50, rf:1.00},
+  fit_muscular:  {label:"Fit muscular",  desc:"lean with muscle",  cf:0.95, ppl:0.95, fpl:0.38, sug:45, rf:1.00},
+  ripped:        {label:"Ripped",        desc:"very lean, defined",cf:0.80, ppl:1.05, fpl:0.30, sug:35, rf:1.08},
+  bodybuilder:   {label:"Bodybuilder",   desc:"max size (bulk)",   cf:1.10, ppl:1.00, fpl:0.40, sug:40, rf:0.95}
+};
+const PHYS_ORDER=["thin","thin_athletic","fit_average","fit_muscular","ripped","bodybuilder"];
+function physOf(){return PHYSIQUES[PROFILE.fit&&PROFILE.fit.physique]||null;}
+function fitSet(){return !!physOf();}
 function computeGoals(w){
   w=parseInt(w||PROFILE.weight)||170;
-  const f=PROFILE.fit||{};const sex=f.sex||"male";const bt=f.bodytype||"average";const g=fitGoals();
-  let perLb = sex==="female"?12.5 : sex==="other"?13.5 : 14.5;        // maintenance cal/lb, moderately active
+  const f=PROFILE.fit||{};const sex=f.sex||"male";const bt=f.bodytype||"average";
+  const phys=physOf()||PHYSIQUES.fit_average;
+  let perLb = sex==="female"?11.5 : sex==="other"?12.5 : 13.5;        // maintenance cal/lb, moderately active
   perLb += bt==="lean"?1 : bt==="broad"?-1.5 : 0;
   const maint=w*perLb;
-  const deficit=g.loss*0.25 - g.mass*0.12;                           // net fraction off maintenance
-  let cal=Math.round(maint*(1-deficit)/10)*10;
+  let cal=Math.round(maint*phys.cf/10)*10;
   const calFloor=sex==="female"?1200:1500; cal=Math.max(calFloor,cal);
-  const drive=Math.max(g.mass,g.strength,g.tone,g.loss);
-  let p=Math.round(w*((sex==="female"?0.65:0.7)+0.35*drive));         // protein g/lb
-  let fat=Math.round(w*(0.4-g.loss*0.12));
+  let p=Math.round(w*phys.ppl);
+  let fat=Math.round(w*phys.fpl);
   let c=Math.max(60,Math.round((cal-p*4-fat*9)/4));                   // carbs fill the rest
-  let sug=Math.max(25,Math.round(50-g.loss*20-g.mass*5));             // sugar cap
-  return {p:p,c:c,fat:fat,sug:sug,cal:cal};
+  return {p:p,c:c,fat:fat,sug:phys.sug,cal:cal};
 }
 function defaultGoals(){const w=parseInt(PROFILE.weight)||0;if(fitSet())return computeGoals(w);return {p:w?Math.round(w*0.9):160,c:200,fat:w?Math.round(w*0.35):65,sug:50,cal:w?Math.round(w*12.5):2300};}
 function foodGoals(){let g=null;try{g=JSON.parse(store.get(goalKey()));}catch(e){}const d=defaultGoals();if(!g||typeof g!=="object")return d;const n=(v,f)=>typeof v==="number"&&!isNaN(v)?v:f;return {p:n(g.p,d.p),c:n(g.c,d.c),fat:n(g.fat,d.fat),sug:n(g.sug,d.sug),cal:n(g.cal,d.cal)};}
-/* reps shift with goals: endurance/toning/fat-loss → higher reps; strength → lower; mass → neutral */
-function goalRepFactor(){if(!fitSet())return 1;const g=fitGoals();let f=1+(g.loss*0.25+g.tone*0.30)-(g.strength*0.30)-(g.mass*0.05);return Math.min(1.4,Math.max(0.65,f));}
+function goalRepFactor(){const phys=physOf();return phys?phys.rf:1;}
 function goalFocus(){
-  if(!fitSet())return null;
-  const g=fitGoals();
-  const items=[["Fat loss",g.loss],["Toning",g.tone],["Strength",g.strength],["Muscle mass",g.mass],["Flexibility",g.flex]].filter(x=>x[1]>0.05).sort((a,b)=>b[1]-a[1]);
-  if(!items.length)return null;
-  const top=items.slice(0,2).map(x=>x[0]);
-  const rf=goalRepFactor();
-  let rep = rf>1.12?"higher reps, short rest (~30s)" : rf<0.9?"heavier, lower reps (5–8), longer rest" : "moderate reps (8–12)";
-  let freq = g.loss>0.5||g.tone>0.5?"5–6 days/week, keep rest short" : g.strength>0.5?"4 days/week, rest fully between sets" : "4–5 days/week";
-  const flex = g.flex>0.4?" Add the stretch/mobility bonus on rest days." : "";
-  return {label:top.join(" + "),detail:"Plan tuned for "+top.join(" + ").toLowerCase()+": "+rep+", "+freq+"."+flex};
+  const phys=physOf();if(!phys)return null;
+  const rf=phys.rf;
+  const rep = rf>1.1?"higher reps, short rest" : rf<0.98?"heavier, lower reps, full rest" : "moderate reps (8–12)";
+  const dir = phys.cf<0.9?"a calorie deficit" : phys.cf>1.03?"a slight surplus" : "near maintenance";
+  return {label:phys.label,detail:"Targeting "+phys.label.toLowerCase()+": "+dir+", protein priority, "+rep+"."};
 }
 function saveGoals(g){try{store.set(goalKey(),JSON.stringify(g));}catch(e){}}
 function foodToday(){const t=today();const rows=FOOD.filter(r=>r.date===t);return {p:rows.reduce((a,r)=>a+(+r.p||0),0),c:rows.reduce((a,r)=>a+(+r.c||0),0),sug:rows.reduce((a,r)=>a+(+r.sug||0),0),fat:rows.reduce((a,r)=>a+(+r.fat||0),0),cal:rows.reduce((a,r)=>a+(+r.cal||0),0),rows:rows};}
@@ -2073,16 +2082,15 @@ function buildEqRows(){
   document.querySelectorAll(".eqseg").forEach(seg=>seg.querySelectorAll("button").forEach(b=>b.onclick=()=>{seg.querySelectorAll("button").forEach(x=>x.classList.remove("on"));b.classList.add("on");}));
 }
 function readEq(type){const out=[],seen={};document.querySelectorAll('.eqw[data-type="'+type+'"]').forEach(inp=>{const w=parseFloat(inp.value);if(isNaN(w)||w<=0)return;const idx=inp.getAttribute("data-idx");const seg=document.querySelector('.eqseg[data-type="'+type+'"][data-idx="'+idx+'"]');const on=seg?seg.querySelector("button.on"):null;const pair=on?on.getAttribute("data-pair")==="1":false;const k=w+"/"+pair;if(seen[k])return;seen[k]=1;out.push({w:w,pair:pair});});return out.slice(0,3).sort((a,b)=>a.w-b.w);}
-const GOAL_SLIDERS=[["loss","Weight loss"],["tone","Toning"],["strength","Strength"],["mass","Muscle mass"],["flex","Flexibility"]];
 function setSeg(id,val){const seg=document.getElementById(id);if(!seg)return;seg.querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.v===val));seg.querySelectorAll("button").forEach(b=>{if(!b.dataset.wired){b.dataset.wired="1";b.onclick=()=>{seg.querySelectorAll("button").forEach(x=>x.classList.remove("on"));b.classList.add("on");};}});}
 function buildFitRows(){
   const f=PROFILE.fit||{};
   setSeg("pfSex",f.sex||"male");
   setSeg("pfBody",f.bodytype||"average");
   setSeg("pfLevel",f.level||"return");
-  const host=document.getElementById("pfGoals");
-  if(host){const G=f.goals||{};host.innerHTML=GOAL_SLIDERS.map(s=>'<div class="gslider"><div class="gstop"><span>'+s[1]+'</span><b id="gval-'+s[0]+'">'+(+G[s[0]]||0)+'</b></div><input type="range" min="0" max="100" step="5" id="gs-'+s[0]+'" data-g="'+s[0]+'" value="'+(+G[s[0]]||0)+'"></div>').join('');
-    host.querySelectorAll('input[type="range"]').forEach(inp=>inp.oninput=()=>{const v=document.getElementById("gval-"+inp.dataset.g);if(v)v.textContent=inp.value;});}
+  const host=document.getElementById("pfPhys");
+  if(host){const cur=f.physique||"";host.innerHTML=PHYS_ORDER.map(k=>'<button type="button" class="pchip'+(k===cur?" on":"")+'" data-p="'+k+'"><b>'+PHYSIQUES[k].label+'</b><small>'+PHYSIQUES[k].desc+'</small></button>').join('');
+    host.querySelectorAll(".pchip").forEach(b=>b.onclick=()=>{host.querySelectorAll(".pchip").forEach(x=>x.classList.remove("on"));b.classList.add("on");});}
   buildFocusRows();
 }
 const DEF_FOCUS={arms:34,legs:33,core:33};
@@ -2100,10 +2108,10 @@ function buildFocusRows(){
 function readFocus(){const v=_focusVals||DEF_FOCUS;const neutral=v.arms===DEF_FOCUS.arms&&v.legs===DEF_FOCUS.legs&&v.core===DEF_FOCUS.core;return {arms:v.arms,legs:v.legs,core:v.core,set:!neutral};}
 function readFit(){
   const sexOn=document.querySelector("#pfSex button.on"),btOn=document.querySelector("#pfBody button.on");
-  const goals={};GOAL_SLIDERS.forEach(s=>{const inp=document.getElementById("gs-"+s[0]);goals[s[0]]=inp?+inp.value||0:0;});
   const lvlOn=document.querySelector("#pfLevel button.on");
-  const anyGoal=Object.values(goals).some(v=>v>0);
-  return {set:anyGoal,sex:sexOn?sexOn.dataset.v:(PROFILE.fit&&PROFILE.fit.sex)||"male",bodytype:btOn?btOn.dataset.v:(PROFILE.fit&&PROFILE.fit.bodytype)||"average",level:lvlOn?lvlOn.dataset.v:(PROFILE.fit&&PROFILE.fit.level)||"return",goals:goals,focus:readFocus()};
+  const physOn=document.querySelector("#pfPhys .pchip.on");
+  const phys=physOn?physOn.dataset.p:(PROFILE.fit&&PROFILE.fit.physique)||"";
+  return {sex:sexOn?sexOn.dataset.v:(PROFILE.fit&&PROFILE.fit.sex)||"male",bodytype:btOn?btOn.dataset.v:(PROFILE.fit&&PROFILE.fit.bodytype)||"average",level:lvlOn?lvlOn.dataset.v:(PROFILE.fit&&PROFILE.fit.level)||"return",physique:phys,focus:readFocus()};
 }
 document.querySelectorAll("#kindSeg button").forEach(b=>b.onclick=()=>{document.querySelectorAll("#kindSeg button").forEach(x=>x.classList.remove("on"));b.classList.add("on");});
 document.getElementById("msgSend").onclick=sendMsg;
