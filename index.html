@@ -131,6 +131,8 @@
   .cell.l1{background:rgba(255,106,61,.28);border-color:rgba(255,106,61,.4)}
   .cell.l2{background:rgba(255,106,61,.55);border-color:var(--ember)}
   .cell.l3{background:var(--ember);border-color:var(--ember)}
+  .cell.lbonus{background:#9b8cff;border-color:#b9adff}
+  .cell.lpartial{background:rgba(231,192,105,.85);border-color:#e7c069}
   .cell.today{outline:2px solid var(--gold);outline-offset:1px}
   .cell.has{cursor:pointer}
   .cell.has:active{transform:scale(.92)}
@@ -1703,6 +1705,26 @@ function showFoodDetail(k){
   ov.onclick=ev=>{if(ev.target===ov)hideDayDetail();};
   ov.classList.add("show");
 }
+function workoutDayClass(n){
+  let loggedWorkout=false, bonus=false, fullReg=false, partialReg=false;
+  n.sessions.forEach(s=>{
+    if(s.klass){ if(sessLogged(s)){loggedWorkout=true;fullReg=true;} return; }
+    const anyNums=Object.values(s.sets||{}).some(a=>a&&a.some(v=>+v>0));
+    if(!anyNums && !s.done) return;
+    loggedWorkout=true;
+    const P=PROGRAM[s.workout];
+    if(!P){ fullReg=true; return; }
+    const boostIds=(P.bonus||[]).map(x=>x.id).concat([ARMBOOST,LEGBOOST,COREBOOST].map(pl=>pl[s.workout]&&pl[s.workout].id).filter(Boolean));
+    if(boostIds.some(id=>{const a=s.sets[id];return a&&a.some(v=>+v>0);})) bonus=true;
+    const regIds=P.ex.map(x=>x.id);
+    const done=regIds.filter(id=>{const a=s.sets[id];return a&&a.some(v=>+v>0);}).length;
+    if(s.done||done>=regIds.length) fullReg=true; else if(done>0) partialReg=true;
+  });
+  if(bonus)return "lbonus";
+  if(fullReg)return "l3";
+  if(partialReg||loggedWorkout)return "lpartial";
+  return "";
+}
 function renderHeat(){
   const heat=document.getElementById("heat");if(!heat)return;heat.innerHTML="";
   const tStr=today();
@@ -1722,9 +1744,7 @@ function renderHeat(){
         if(a&&a.n>0){const total=heatMetric==="cal"?a.cal:heatMetric==="p"?a.p:heatMetric==="c"?a.c:heatMetric==="fat"?a.fat:a.sug;const lvl=heatLevel(heatMetric,total,goalVal);if(lvl){c.classList.add(lvl);}c.classList.add("has");c.onclick=()=>showFoodDetail(k);c.title=fmtNice(k)+" · "+Math.round(total)+(heatMetric==="cal"?" cal":" g");}
         else c.title=fmtNice(k)+" · nothing logged";
       } else {
-        const e=DB[k];if(e){const n=normalizeEntry(e);let pct=0,anyDone=false,nLog=0;
-          n.sessions.forEach(s=>{if(s.done)anyDone=true;if(sessLogged(s))nLog++;const exs=PROGRAM[s.workout]?PROGRAM[s.workout].ex:[];let dn=0;exs.forEach(x=>{const ss=s.sets[x.id];if(ss&&ss.some(v=>+v>0))dn++;});const p=exs.length?dn/exs.length:0;if(p>pct)pct=p;});
-          if(anyDone||pct>=.99||nLog>=2)c.classList.add("l3");else if(pct>=.5)c.classList.add("l2");else if(pct>0||n.creatine)c.classList.add("l1");
+        const e=DB[k];if(e){const n=normalizeEntry(e);const cls=workoutDayClass(n);if(cls)c.classList.add(cls);
           if(dayLogged(k)||n.creatine){c.classList.add("has");c.onclick=()=>showDayDetail(k);}}
         c.title=fmtNice(k);
       }
@@ -1740,7 +1760,7 @@ function renderHeat(){
       const key='<div class="heatkey"><span><i style="background:rgba(126,224,166,.85)"></i>'+(cap?"under":"at / above")+' target</span><span><i style="background:rgba(231,192,105,.85)"></i>'+(cap?"near cap":"slightly under")+'</span><span><i style="background:rgba(255,106,61,.85)"></i>'+(cap?"over cap":"well under")+'</span></div>';
       note.innerHTML=(cap?('<b>'+lbl+' cap: '+Math.round(goalVal)+(heatMetric==="cal"?" cal":" g")+'.</b> Green = comfortably under, yellow = near or at it, red = over. Only days with food logged are colored.'):('<b>'+lbl+' target: '+Math.round(goalVal)+' g.</b> Green = you hit it, yellow = close, red = short. Only days with food logged are colored.'))+key;
     } else {
-      note.innerHTML="Brighter = more of the session completed. Consistency beats intensity at 47 — show up, log it, repeat.";
+      note.innerHTML='<div class="heatkey"><span><i style="background:var(--ember)"></i>full session</span><span><i style="background:#9b8cff"></i>+ bonus round</span><span><i style="background:rgba(231,192,105,.85)"></i>partial</span><span><i style="background:var(--panel-2)"></i>rest day</span></div>Show up, log it, repeat. Consistency beats intensity.';
     }
   }
 }
