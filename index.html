@@ -552,7 +552,7 @@
     <div class="card">
       <span class="eyebrow">This week · the standings</span>
       <div id="crewBoard"></div>
-      <p class="note" style="margin-top:10px">👑 = most days trained this week. 🪣 = last place takes the <b>Tub-o-Shit</b>. Resets every Sunday — train more days to climb (ties broken by total reps).</p>
+      <p class="note" style="margin-top:10px">👑 = most days trained this week. 🪣 = last place takes the <b>Tub-o-Shit</b>. Resets every Sunday — train more days to climb (ties broken by who's on the longer active streak).</p>
     </div>
     <div class="card">
       <span class="eyebrow">Talk trash · send love</span>
@@ -1766,12 +1766,12 @@ async function renderCrew(){
     (logs||[]).forEach(r=>{const u=acc[r.user_id]; if(!u)return; const p=normalizeEntry(r.payload); let logged=false; p.sessions.forEach(s=>{u.reps+=sessReps(s); if(sessLogged(s))logged=true;}); if(logged)u.days.add(r.log_date);});
     const streakFromDates=set=>{let d=today();if(!set.has(d))d=shiftYmd(d,-1);let n=0;while(set.has(d)){n++;d=shiftYmd(d,-1);}return n;};
     const rows=Object.keys(acc).map(k=>{const u=acc[k];const ds=[...u.days];return{id:u.id,name:u.name,reps:u.reps,streak:streakFromDates(u.days),wk:ds.filter(d=>d>=ws&&d<=we).length,mo:ds.filter(d=>d.slice(0,7)===moPre).length,yr:ds.filter(d=>d.slice(0,4)===yrPre).length};});
-    rows.sort((a,b)=>b.wk-a.wk||b.reps-a.reps);
+    rows.sort((a,b)=>b.wk-a.wk||b.streak-a.streak);
     const active=rows.some(r=>r.wk>0);
     board.innerHTML=rows.map((r,i)=>{
       const lead=active&&i===0;
-      const tub=active&&i===rows.length-1&&rows.length>1&&(r.wk<rows[0].wk||r.reps<rows[0].reps);
-      return '<div class="crewrow'+(ME&&r.id===ME.id?' me':'')+'"><div class="crewrank">'+(lead?'👑':tub?'🪣':(i+1))+'</div><div class="crewbody"><div class="crewname">'+esc(r.name)+(ME&&r.id===ME.id?' (you)':'')+(tub?' <span style="color:var(--ember);font-size:12px">· Tub-o-Shit 💩</span>':'')+'</div><div class="crewmini"><span><b>🔥'+r.streak+'</b>streak</span><span><b>'+r.wk+'</b>this wk</span><span><b>'+r.mo+'</b>this mo</span><span><b>'+r.yr+'</b>this yr</span><span><b>'+r.reps.toLocaleString()+'</b>reps</span></div></div></div>';
+      const tub=active&&i===rows.length-1&&rows.length>1&&(r.wk<rows[0].wk||r.streak<rows[0].streak);
+      return '<div class="crewrow'+(ME&&r.id===ME.id?' me':'')+'"><div class="crewrank">'+(lead?'👑':tub?'🪣':(i+1))+'</div><div class="crewbody"><div class="crewname">'+esc(r.name)+(ME&&r.id===ME.id?' (you)':'')+(tub?' <span style="color:var(--ember);font-size:12px">· Tub-o-Shit 💩</span>':'')+'</div><div class="crewmini"><span><b>'+r.wk+'</b>this wk</span><span><b>🔥'+r.streak+'</b>streak</span><span><b>'+r.mo+'</b>this mo</span><span><b>'+r.yr+'</b>this yr</span></div></div></div>';
     }).join('');
     await renderWall();
   }catch(e){console.warn(e);board.innerHTML='<p class="note">Couldn\u2019t load crew stats.</p>';}
