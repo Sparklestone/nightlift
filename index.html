@@ -779,11 +779,35 @@ async function pushDate(d,immediate){
 }
 function persist(d){ pushDate(d); }
 
-/* ---- Oura ring (per-user personal access token, kept only in this browser) ---- */
+/* ---- Oura ring (OAuth2 client-side flow; token kept only in this browser) ---- */
+const OURA_CLIENT_ID="88ebec7d-4749-4acf-b9ad-881e3c9775bb";
+const OURA_REDIRECT="https://nightlift.vercel.app/";
+const OURA_AUTH_URL="https://cloud.ouraring.com/oauth/authorize";
 let OURA_DATA=null;
 function ouraKey(){return "nightlift_oura_"+(ME?ME.id:"anon");}
-function ouraToken(){return store.get(ouraKey())||"";}
-function setOuraToken(t){store.set(ouraKey(),t||"");}
+function ouraStore(){try{return JSON.parse(store.get(ouraKey()))||null;}catch(e){return null;}}
+function ouraToken(){const o=ouraStore();if(!o||!o.t)return"";if(o.exp&&Date.now()>o.exp)return"";return o.t;}
+function setOuraToken(t,exp){store.set(ouraKey(),t?JSON.stringify({t:t,exp:exp||0}):"");}
+function connectOura(){
+  const state="nl"+Math.random().toString(36).slice(2)+Date.now().toString(36);
+  try{store.set("nightlift_oura_state",state);}catch(e){}
+  const u=OURA_AUTH_URL+"?response_type=token&client_id="+encodeURIComponent(OURA_CLIENT_ID)+"&redirect_uri="+encodeURIComponent(OURA_REDIRECT)+"&scope=daily&state="+encodeURIComponent(state);
+  location.href=u;
+}
+function captureOuraRedirect(){
+  const h=location.hash||"";
+  if(h.indexOf("access_token=")<0)return false;
+  const p=new URLSearchParams(h.replace(/^#/,""));
+  const tok=p.get("access_token");
+  const exp=p.get("expires_in")?Date.now()+(+p.get("expires_in")*1000):Date.now()+30*864e5;
+  const st=p.get("state"); let want="";try{want=store.get("nightlift_oura_state")||"";}catch(e){}
+  try{history.replaceState(null,"",location.pathname+location.search);}catch(e){location.hash="";}
+  if(!tok)return false;
+  if(want&&st&&st!==want){console.warn("oura state mismatch");return false;}
+  setOuraToken(tok,exp);
+  try{store.set("nightlift_oura_state","");}catch(e){}
+  return true;
+}
 async function ouraFetch(ep,start,end){
   const tok=ouraToken(); if(!tok)return null;
   const r=await fetch(SB_URL+"/functions/v1/oura-proxy",{method:"POST",headers:{"Content-Type":"application/json","apikey":SB_ANON_KEY,"Authorization":"Bearer "+SB_ANON_KEY,"x-oura-token":tok},body:JSON.stringify({ep:ep,start:start,end:end})});
@@ -822,17 +846,18 @@ function renderOuraBox(){
   const box=document.getElementById("ouraBox"); if(!box)return;
   if(ouraToken()){
     let stat="<div class=\"ourstat\"><span class=\"dot\"></span>Connected</div>";
-    if(OURA_DATA&&OURA_DATA.err==="auth")stat="<div class=\"ourstat\"><span class=\"dot\" style=\"background:var(--ember)\"></span>Token rejected — reconnect below</div>";
+    if(OURA_DATA&&OURA_DATA.err==="auth")stat="<div class=\"ourstat\"><span class=\"dot\" style=\"background:var(--ember)\"></span>Connection expired — reconnect below</div>";
     else if(OURA_DATA&&OURA_DATA.err)stat="<div class=\"ourstat\"><span class=\"dot\" style=\"background:var(--gold)\"></span>Connected — couldn’t reach Oura just now</div>";
     let line="";
     if(OURA_DATA&&!OURA_DATA.err){line='<div class="ourline"><div><span class="b">'+(OURA_DATA.readiness??"—")+'</span><small>Readiness</small></div><div><span class="b">'+(OURA_DATA.sleep??"—")+'</span><small>Sleep</small></div></div>';}
-    box.innerHTML=stat+line+'<p class="ourlead">Your readiness and sleep scores show up as a banner on the Tonight tab to tell you whether to push or back off.</p><button class="ourdis" id="ourDisc" type="button">Disconnect Oura</button>';
+    const reconnect=(OURA_DATA&&OURA_DATA.err==="auth")?'<button class="ourbtn" id="ourConn" type="button" style="margin-bottom:8px">Reconnect Oura</button>':'';
+    box.innerHTML=stat+line+reconnect+'<p class="ourlead">Your readiness and sleep show up as a banner on the Tonight tab telling you whether to push or back off. The connection refreshes about once a month.</p><button class="ourdis" id="ourDisc" type="button">Disconnect Oura</button>';
+    const rc=box.querySelector("#ourConn"); if(rc)rc.onclick=()=>connectOura();
     box.querySelector("#ourDisc").onclick=()=>{setOuraToken("");OURA_DATA=null;renderOuraBox();renderOuraBanner();};
   } else {
-    box.innerHTML='<p class="ourlead">Paste your Oura personal access token to show readiness and sleep here. Create one at <a href="https://cloud.ouraring.com/personal-access-tokens" target="_blank" rel="noopener">cloud.ouraring.com</a> → Personal Access Tokens. It stays on this device only — not shared with the crew.</p>'+
-      '<input class="ourin" id="ourTok" type="password" placeholder="Paste token (starts with a long string)" autocomplete="off">'+
+    box.innerHTML='<p class="ourlead">Connect your Oura ring to show your daily readiness and sleep here, and get a push-or-back-off call for tonight. You’ll approve it on Oura’s own page. It stays on this device only and is never shared with the crew.</p>'+
       '<button class="ourbtn" id="ourConn" type="button">Connect Oura</button>';
-    box.querySelector("#ourConn").onclick=async()=>{const t=box.querySelector("#ourTok").value.trim();if(!t)return;const b=box.querySelector("#ourConn");b.textContent="Checking…";b.disabled=true;setOuraToken(t);try{await refreshOura();if(OURA_DATA&&OURA_DATA.err==="auth"){setOuraToken("");alert("That token was rejected by Oura. Double-check you copied the whole thing.");}}catch(e){}renderOuraBox();};
+    box.querySelector("#ourConn").onclick=()=>connectOura();
   }
 }
 
@@ -2318,7 +2343,7 @@ async function openApp(){
   await pullBody();
   openDay();
   try{ renderToday(); }catch(e){ console.warn(e); }
-  try{ refreshOura(); }catch(e){}
+  try{ captureOuraRedirect(); refreshOura(); }catch(e){}
 }
 const gi=document.getElementById("gateInput"),gb=document.getElementById("gateBtn"),gh=document.querySelector("#gate .hint");
 function tryUnlock(){
