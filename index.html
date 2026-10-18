@@ -930,8 +930,8 @@ const LEVEL_SWAP={
   d5:{reg:{name:"Knee Plank",load:"Bodyweight",reps:"20–40 sec",pattern:"plank",cues:["Forearms down, knees on the floor, straight line head to knees.","Brace the abs and squeeze the glutes.","Hold steady."],tech:"From the knees first — add seconds, then move to a full plank.",prog:"Straighten the legs for a full plank."}}
 };
 function levelVariant(ex){const f=PROFILE.fit||{};const lvl=f.level;if(!lvl||lvl==="return")return null;const sw=LEVEL_SWAP[ex.id];if(!sw)return null;const v=lvl==="new"?sw.reg:lvl==="pro"?sw.adv:null;if(!v)return null;return Object.assign({},ex,v,{id:ex.id,star:ex.star,lvl:lvl==="new"?"easier":"advanced"});}
-function dayEx(workout){return PROGRAM[workout].ex.map(ex=>{const o=PROFILE.overrides&&PROFILE.overrides[ex.id];const base=o?Object.assign({},ex,o,{id:ex.id,star:0}):(levelVariant(ex)||ex);return applyFocus(base);});}
-function bonusEx(workout){const b=PROGRAM[workout]&&PROGRAM[workout].bonus;return Array.isArray(b)?b.map(ex=>{const o=PROFILE.overrides&&PROFILE.overrides[ex.id];const base=o?Object.assign({},ex,o,{id:ex.id,star:0}):ex;return applyFocus(base);}):[];}
+function dayEx(workout){return PROGRAM[workout].ex.map(ex=>{const o=PROFILE.overrides&&PROFILE.overrides[ex.id];const base=o?Object.assign({},ex,o,{id:ex.id,star:0}):(levelVariant(ex)||ex);return applyFocus(applyEquip(base));});}
+function bonusEx(workout){const b=PROGRAM[workout]&&PROGRAM[workout].bonus;return Array.isArray(b)?b.map(ex=>{const o=PROFILE.overrides&&PROFILE.overrides[ex.id];const base=o?Object.assign({},ex,o,{id:ex.id,star:0}):ex;return applyFocus(applyEquip(base));}):[];}
 function shownEx(){let l=dayEx(S.workout);if(S&&S.bonus)l=l.concat(bonusEx(S.workout));if(S&&S.armboost){const a=armEx(S.workout);if(a)l=l.concat([a]);}return l;}
 /* Arm Boost — one focused arm-mass move per day, rotating biceps/triceps across the week */
 const ARMBOOST={
@@ -982,7 +982,7 @@ const COREBOOST={
 };
 const FBOOST={arms:ARMBOOST,legs:LEGBOOST,core:COREBOOST};
 function topFocusRegion(){const f=PROFILE.fit;if(!f||!f.focus||!f.focus.set)return "arms";const fo=f.focus;const arr=[["arms",+fo.arms||0],["legs",+fo.legs||0],["core",+fo.core||0]].sort((a,b)=>b[1]-a[1]);return arr[0][1]>0?arr[0][0]:"arms";}
-function armEx(workout){const region=topFocusRegion();const a=(FBOOST[region]||ARMBOOST)[workout];if(!a)return null;const o=PROFILE.overrides&&PROFILE.overrides[a.id];return o?Object.assign({},a,o,{id:a.id,star:0}):a;}
+function armEx(workout){const region=topFocusRegion();const a=(FBOOST[region]||ARMBOOST)[workout];if(!a)return null;const o=PROFILE.overrides&&PROFILE.overrides[a.id];const base=o?Object.assign({},a,o,{id:a.id,star:0}):a;return applyEquip(base);}
 function poseId(ex){return ex.pattern?(PATTERN_POSE[ex.pattern]||""):ex.id;}
 function esc(s){return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
 
@@ -1014,8 +1014,7 @@ function adapt(ex){
   if(t==="kb"){
     const w=pickW(singlesOf("kb"),tier);
     if(w!=null)return{load:w+" KB",reps:scaleReps(ex.reps,25,w),note:""};
-    const dp=pickW(pairsOf("db"),tier); if(dp!=null)return{load:"2×"+dp+" DB",reps:scaleReps(ex.reps,25,dp),note:"(no KB — using DBs)"};
-    const ds=pickW(singlesOf("db"),tier); if(ds!=null)return{load:"1×"+ds+" DB",reps:scaleReps(ex.reps,25,ds),note:"(no KB — single DB)"};
+    const ds=pickW(singlesOf("db"),tier); if(ds!=null)return{load:ds+" DB",reps:scaleReps(ex.reps,25,ds),note:"(no KB — one DB)"};
     return{load:"Bodyweight",reps:ex.reps,note:"(add a kettlebell)"};
   } else {
     const needPair=dbCount(ex.load)===2;
@@ -1046,10 +1045,22 @@ const REGION_OF={quads:"legs",hamstrings:"legs",calves:"legs",posterior:"legs",g
 function focusSet(){const f=PROFILE.fit;return !!(f&&f.focus&&f.focus.set);}
 function focusMult(region){if(!focusSet()||!region)return 1;const v=+PROFILE.fit.focus[region];if(isNaN(v))return 1;const base=100/3;return Math.min(1.8,Math.max(0.5,1+((v-base)/base)*0.5));}
 function applyFocus(ex){if(!focusSet())return ex;const region=REGION_OF[EX_CAT[ex.id]];if(!region)return ex;const ns=Math.min(5,Math.max(1,Math.round((ex.sets||3)*focusMult(region))));if(ns===ex.sets)return ex;const copy=Object.assign({},ex,{sets:ns});copy.focusDir=ns>ex.sets?"up":"down";return copy;}
+/* ---- no kettlebells? present KB moves as their dumbbell equivalent (name, cues, video) ---- */
+const EQUIP_SWAP={
+  a2:{name:"DB Romanian Deadlift",pattern:"hinge",cues:["Hold one dumbbell in both hands against your thighs, soft knees.","Push the hips back, the DB skims your legs — feel the hamstring stretch.","Drive the hips forward to stand tall, squeeze the glutes."],tech:"Same hip hinge as the kettlebell version. 3-sec lower; the loaded stretch grows the hamstrings."},
+  b2:{name:"DB Single-Arm Floor Press",pattern:"press",cues:["Lie on the floor, one dumbbell pressed over the shoulder, elbow ~45°.","Lower until the upper arm rests on the floor (2 sec).","Press up and squeeze the chest."],tech:"A single dumbbell subs cleanly for the bell — drive these close to failure."},
+  b3:{name:"DB Single-Arm Overhead Press",pattern:"overhead",cues:["One dumbbell at shoulder height, core braced.","Press straight overhead without leaning back.","Lower under control, then switch sides."],tech:"Leave 1 rep in reserve overhead — don't grind to failure."},
+  c1:{name:"DB Single-Arm Row",pattern:"row",cues:["One hand and knee braced on a couch or chair, flat back.","Pull the dumbbell to your hip, elbow tight to your side.","Squeeze the shoulder blade, lower 2 sec. Switch."],tech:"A dumbbell rows just like the bell — last set to failure each side."},
+  d1:{name:"DB Romanian Deadlift",pattern:"hinge",cues:["Hold one dumbbell in both hands, soft knees.","Push the hips back, flat back, the DB skims your legs.","Snap the hips forward to stand, squeeze the glutes."],tech:"Without a bell, the RDL trains the same posterior chain as the swing — no skill risk."},
+  d2:{name:"DB Goblet Squat",pattern:"squat",cues:["Hold one dumbbell vertically against your chest.","Sit down between the hips, 3-sec descent, chest tall.","Drive up through the heels."],tech:"A dumbbell held like a goblet subs perfectly for the bell."},
+  a6:{name:"DB Goblet Squat Burnout",pattern:"squat",cues:["One dumbbell at the chest, feet shoulder-width.","Smooth high-rep tempo — chase the burn.","Push past the target if the legs have it."],tech:"Pure quad-and-glute pump to finish the legs."},
+  ld:{name:"DB Goblet Squat",pattern:"squat",cues:["Hold one dumbbell vertically at the chest.","Sit down between the hips, chest tall.","Drive up through the heels."],tech:"Extra lower-body volume with a single dumbbell."}
+};
+function applyEquip(ex){if(ownedKB().length>0)return ex;if(implType(ex.load)!=="kb")return ex;const sw=EQUIP_SWAP[ex.id];if(!sw)return ex;return Object.assign({},ex,sw,{id:ex.id,star:ex.star,eqsw:true});}
 /* Curated YouTube form-demo clips (video IDs). Exercises not listed here open a YouTube search on tap. */
 const YT={a1:"2C-uNgKwPLE",a2:"Uc5rP5xs7qQ",b1:"WDIpL0pjun0",d3:"WDIpL0pjun0",c3:"in7PaeYlhrM",d1:"sSESeQAir2M"};
 function exMedia(ex){
-  const vid=ex.lvl?null:YT[ex.id];
+  const vid=(ex.lvl||ex.replaced||ex.eqsw)?null:YT[ex.id];
   if(vid){
     return '<div class="ytposter" data-yt="'+vid+'" data-name="'+esc(ex.name)+'">'+
       '<img src="https://i.ytimg.com/vi/'+vid+'/hqdefault.jpg" alt="'+esc(ex.name)+' form demo" loading="lazy" onerror="this.style.display=\'none\';this.parentNode.classList.add(\'noimg\')">'+
