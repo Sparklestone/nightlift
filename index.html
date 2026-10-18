@@ -526,6 +526,8 @@
       </div>
       <label class="fflabel">Body type</label>
       <div class="fseg" id="pfBody"><button type="button" data-v="lean">Lean<small>slim</small></button><button type="button" data-v="average">Average<small>mid</small></button><button type="button" data-v="broad">Broad<small>stocky</small></button></div>
+      <label class="fflabel">Training level <span>sets which exercise variations you get</span></label>
+      <div class="fseg" id="pfLevel"><button type="button" data-v="new">New<small>easier moves</small></button><button type="button" data-v="return">Returning<small>standard</small></button><button type="button" data-v="pro">Experienced<small>harder</small></button></div>
       <label class="fflabel">Your goals <span>slide what matters most — the plan and food targets follow</span></label>
       <div id="pfGoals"></div>
       <div class="eqgroup">
@@ -910,7 +912,23 @@ function figFrames(id){if(!POSES[id])return'';return'<div class="figwrap"><div c
 function repTarget(r){r=(r||"").toLowerCase();if(r.indexOf("failure")>=0)return"MAX";return r.replace(/\/.*$/,"").replace("sec","").trim();}
 
 /* ===================== per-user program (with AI swaps) ===================== */
-function dayEx(workout){return PROGRAM[workout].ex.map(ex=>{const o=PROFILE.overrides&&PROFILE.overrides[ex.id];return o?Object.assign({},ex,o,{id:ex.id,star:0}):ex;});}
+/* ---- training-level exercise swaps: regressions for new, harder variants for experienced ---- */
+const LEVEL_SWAP={
+  a1:{reg:{name:"Split Squat",load:"Bodyweight",reps:"10–12 / leg",pattern:"splitsquat",cues:["Feet staggered, both on the floor, hold a wall or chair for balance.","Drop straight down, front shin vertical.","Push up through the front heel. All reps one leg, then switch."],tech:"Both feet down is far steadier than the elevated version — build the strength and balance here first.",prog:"When 3×12 is easy, elevate the rear foot to make it a Bulgarian."},
+      adv:{name:"Deficit Bulgarian Split Squat",reps:"8–12 / leg",cues:["Rear foot up, front foot on a low plate or step.","Drop the back knee below the step line, 3 sec.","Drive through the front heel."],tech:"The deficit adds range — brutal on the quads and glutes.",prog:"Add load before adding reps."}},
+  a4:{reg:{name:"Two-Leg Calf Raise",load:"Bodyweight",reps:"15–20",pattern:"calf",cues:["Stand tall, balls of the feet on an edge if you have one.","Rise onto both feet, squeeze the calves 1 sec.","Lower slow and full."],tech:"Both legs first — move to single-leg once 20 is easy.",prog:"Progress to single-leg, then add weight."}},
+  b1:{reg:{name:"Incline Push-Ups",reps:"8–15",pattern:"pushup",cues:["Hands on a counter, couch arm, or sturdy table — body in one straight line.","Lower your chest to the edge with control.","Press back up. The higher the surface, the easier."],tech:"Incline push-ups build the exact same pressing strength — lower the surface over time toward the floor.",prog:"Lower the surface (counter → chair → floor) as you get stronger."},
+      adv:{name:"Feet-Elevated Push-Ups",reps:"to failure",cues:["Feet up on a chair or couch, hands on the floor.","Lower with control, chest to the floor.","Press up hard."],tech:"Elevating the feet shifts more load onto the chest and shoulders.",prog:"Hands on dumbbells for a deeper stretch."}},
+  b2:{reg:{name:"DB Floor Press",load:"2×10 DB",reps:"10–12",pattern:"press",cues:["On your back, a dumbbell in each hand over the chest.","Lower until the upper arms touch the floor.","Press up and squeeze."],tech:"Two lighter dumbbells are easier to control than one heavy bell.",prog:"Slow the lower, then move to the single-arm bell."}},
+  b3:{reg:{name:"Seated DB Shoulder Press",load:"2×10 DB",reps:"10–12",pattern:"overhead",cues:["Sit tall, a dumbbell in each hand at shoulder height.","Press straight overhead without arching the back.","Lower under control."],tech:"Seated and with lighter dumbbells it's easier to hold strict form.",prog:"Move to the standing single-arm bell press."}},
+  c1:{reg:{name:"DB Single-Arm Row",load:"1×10 DB",reps:"12–15 / side",pattern:"row",cues:["One hand and knee on a couch or chair, flat back.","Pull the dumbbell to your hip, elbow tight.","Squeeze the shoulder blade, lower slow. Switch."],tech:"A dumbbell is easier to control than a bell while you learn the row.",prog:"Add weight, then move to the kettlebell."}},
+  d1:{reg:{name:"KB Deadlift",load:"25 KB",reps:"12–15",pattern:"hinge",cues:["Bell on the floor between your feet.","Hinge at the hips, flat back, grab the handle.","Stand tall by driving the hips forward, squeeze the glutes."],tech:"Learn the hip hinge here before adding the swing's power — same muscles, no skill risk.",prog:"Once the hinge is solid, progress to the swing."}},
+  d3:{reg:{name:"Incline Push-Ups",reps:"8–15",pattern:"pushup",cues:["Hands on a counter or couch arm, body in one straight line.","Lower the chest to the edge with control.","Press back up."],tech:"Same pressing pattern, scaled to your strength — lower the surface over time.",prog:"Lower the surface toward the floor."}},
+  d4:{reg:{name:"Bird Dog",load:"Bodyweight",reps:"10 / side",pattern:"plank",cues:["On hands and knees, back flat.","Extend the opposite arm and leg straight out, hold 2 sec.","Return under control, switch sides. Keep the hips level."],tech:"Builds the same anti-rotation core without balancing on dumbbells.",prog:"Progress to a plank, then renegade rows."}},
+  d5:{reg:{name:"Knee Plank",load:"Bodyweight",reps:"20–40 sec",pattern:"plank",cues:["Forearms down, knees on the floor, straight line head to knees.","Brace the abs and squeeze the glutes.","Hold steady."],tech:"From the knees first — add seconds, then move to a full plank.",prog:"Straighten the legs for a full plank."}}
+};
+function levelVariant(ex){const f=PROFILE.fit||{};const lvl=f.level;if(!lvl||lvl==="return")return null;const sw=LEVEL_SWAP[ex.id];if(!sw)return null;const v=lvl==="new"?sw.reg:lvl==="pro"?sw.adv:null;if(!v)return null;return Object.assign({},ex,v,{id:ex.id,star:ex.star,lvl:lvl==="new"?"easier":"advanced"});}
+function dayEx(workout){return PROGRAM[workout].ex.map(ex=>{const o=PROFILE.overrides&&PROFILE.overrides[ex.id];if(o)return Object.assign({},ex,o,{id:ex.id,star:0});const lv=levelVariant(ex);return lv||ex;});}
 function bonusEx(workout){const b=PROGRAM[workout]&&PROGRAM[workout].bonus;return Array.isArray(b)?b.map(ex=>{const o=PROFILE.overrides&&PROFILE.overrides[ex.id];return o?Object.assign({},ex,o,{id:ex.id,star:0}):ex;}):[];}
 function shownEx(){let l=dayEx(S.workout);if(S&&S.bonus)l=l.concat(bonusEx(S.workout));if(S&&S.armboost){const a=armEx(S.workout);if(a)l=l.concat([a]);}return l;}
 /* Arm Boost — one focused arm-mass move per day, rotating biceps/triceps across the week */
@@ -994,7 +1012,7 @@ const EX_CAT={a1:"quads",a2:"hamstrings",a3:"quads",a4:"calves",a5:"forearms",b1
 /* Curated YouTube form-demo clips (video IDs). Exercises not listed here open a YouTube search on tap. */
 const YT={a1:"2C-uNgKwPLE",a2:"Uc5rP5xs7qQ",b1:"WDIpL0pjun0",d3:"WDIpL0pjun0",c3:"in7PaeYlhrM",d1:"sSESeQAir2M"};
 function exMedia(ex){
-  const vid=YT[ex.id];
+  const vid=ex.lvl?null:YT[ex.id];
   if(vid){
     return '<div class="ytposter" data-yt="'+vid+'" data-name="'+esc(ex.name)+'">'+
       '<img src="https://i.ytimg.com/vi/'+vid+'/hqdefault.jpg" alt="'+esc(ex.name)+' form demo" loading="lazy" onerror="this.style.display=\'none\';this.parentNode.classList.add(\'noimg\')">'+
@@ -1266,7 +1284,7 @@ function exCard(ex){
   el.innerHTML=
     '<div class="ex-head">'+
       '<div class="ex-check">✓</div>'+
-      '<div class="ex-name"><div class="t">'+esc(ex.name)+(ex.star?'<span class="star">★ KEY</span>':'')+(ex.replaced?'<span class="star" style="color:var(--good)">⟳ SWAP</span>':'')+(stalled?'<span class="star" style="color:var(--gold)">⚠ PLATEAU</span>':'')+'</div><div class="m">'+esc(ex.musc)+' · '+ex.sets+' × '+esc(A.reps)+(A.note?' <span style="color:var(--faint)">'+esc(A.note)+'</span>':'')+'</div></div>'+
+      '<div class="ex-name"><div class="t">'+esc(ex.name)+(ex.star?'<span class="star">★ KEY</span>':'')+(ex.replaced?'<span class="star" style="color:var(--good)">⟳ SWAP</span>':'')+(ex.lvl==="easier"?'<span class="star" style="color:#7bd1e0">◗ EASIER</span>':'')+(ex.lvl==="advanced"?'<span class="star" style="color:var(--gold)">▲ ADVANCED</span>':'')+(stalled?'<span class="star" style="color:var(--gold)">⚠ PLATEAU</span>':'')+'</div><div class="m">'+esc(ex.musc)+' · '+ex.sets+' × '+esc(A.reps)+(A.note?' <span style="color:var(--faint)">'+esc(A.note)+'</span>':'')+'</div></div>'+
       '<div class="ex-load">'+esc(A.load).replace(/ /g,'&nbsp;')+'<small>LOAD</small></div>'+
       '<div class="chev">▶</div>'+
     '</div>'+
@@ -2009,6 +2027,7 @@ function buildFitRows(){
   const f=PROFILE.fit||{};
   setSeg("pfSex",f.sex||"male");
   setSeg("pfBody",f.bodytype||"average");
+  setSeg("pfLevel",f.level||"return");
   const host=document.getElementById("pfGoals");
   if(host){const G=f.goals||{};host.innerHTML=GOAL_SLIDERS.map(s=>'<div class="gslider"><div class="gstop"><span>'+s[1]+'</span><b id="gval-'+s[0]+'">'+(+G[s[0]]||0)+'</b></div><input type="range" min="0" max="100" step="5" id="gs-'+s[0]+'" data-g="'+s[0]+'" value="'+(+G[s[0]]||0)+'"></div>').join('');
     host.querySelectorAll('input[type="range"]').forEach(inp=>inp.oninput=()=>{const v=document.getElementById("gval-"+inp.dataset.g);if(v)v.textContent=inp.value;});}
@@ -2016,8 +2035,9 @@ function buildFitRows(){
 function readFit(){
   const sexOn=document.querySelector("#pfSex button.on"),btOn=document.querySelector("#pfBody button.on");
   const goals={};GOAL_SLIDERS.forEach(s=>{const inp=document.getElementById("gs-"+s[0]);goals[s[0]]=inp?+inp.value||0:0;});
+  const lvlOn=document.querySelector("#pfLevel button.on");
   const anyGoal=Object.values(goals).some(v=>v>0);
-  return {set:anyGoal,sex:sexOn?sexOn.dataset.v:(PROFILE.fit&&PROFILE.fit.sex)||"male",bodytype:btOn?btOn.dataset.v:(PROFILE.fit&&PROFILE.fit.bodytype)||"average",goals:goals};
+  return {set:anyGoal,sex:sexOn?sexOn.dataset.v:(PROFILE.fit&&PROFILE.fit.sex)||"male",bodytype:btOn?btOn.dataset.v:(PROFILE.fit&&PROFILE.fit.bodytype)||"average",level:lvlOn?lvlOn.dataset.v:(PROFILE.fit&&PROFILE.fit.level)||"return",goals:goals};
 }
 document.querySelectorAll("#kindSeg button").forEach(b=>b.onclick=()=>{document.querySelectorAll("#kindSeg button").forEach(x=>x.classList.remove("on"));b.classList.add("on");});
 document.getElementById("msgSend").onclick=sendMsg;
