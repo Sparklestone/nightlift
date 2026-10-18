@@ -311,6 +311,15 @@
   .crewmini b{font-family:'Anton';font-size:17px;color:var(--ink);letter-spacing:0;font-weight:400}
   .crewmini span:first-child b{color:var(--ember)}
   .crewmini span:last-child b{color:var(--gold)}
+  .weekdots{display:flex;gap:4px;margin-top:8px}
+  .wd{flex:1;max-width:26px;aspect-ratio:1;border-radius:4px;background:var(--panel-2);border:1px solid var(--line);display:flex;align-items:center;justify-content:center}
+  .wd span{font-size:8px;font-weight:700;color:var(--faint);letter-spacing:0}
+  .wd.l3{background:var(--ember);border-color:var(--ember)}
+  .wd.lbonus{background:#9b8cff;border-color:#b9adff}
+  .wd.lpartial{background:rgba(231,192,105,.85);border-color:#e7c069}
+  .wd.l3 span,.wd.lbonus span,.wd.lpartial span{color:rgba(20,13,6,.55)}
+  .wd.today{box-shadow:0 0 0 2px var(--bg),0 0 0 3px var(--muted)}
+  .wd.future{opacity:.4}
   .composer{display:flex;flex-direction:column;gap:9px;margin-top:10px}
   .seg{display:flex;gap:6px}
   .seg button{flex:1;background:var(--panel-2);border:1px solid var(--line);color:var(--muted);font-family:inherit;font-weight:700;font-size:14px;padding:10px;border-radius:10px;cursor:pointer}
@@ -1798,16 +1807,19 @@ async function renderCrew(){
     const {data:logs}=await sb.from(TABLE).select("user_id,log_date,payload");
     const {data:profs}=await sb.from(T_PROFILE).select("user_id,name");
     const nameOf={}; (profs||[]).forEach(p=>{if(p.name)nameOf[p.user_id]=p.name;});
-    const acc={}; Object.keys(USERS).forEach(c=>{const u=USERS[c];acc[u.id]={id:u.id,name:nameOf[u.id]||u.name,days:new Set(),reps:0};});
-    (logs||[]).forEach(r=>{const u=acc[r.user_id]; if(!u)return; const p=normalizeEntry(r.payload); let logged=false; p.sessions.forEach(s=>{u.reps+=sessReps(s); if(sessLogged(s))logged=true;}); if(logged)u.days.add(r.log_date);});
+    const acc={}; Object.keys(USERS).forEach(c=>{const u=USERS[c];acc[u.id]={id:u.id,name:nameOf[u.id]||u.name,days:new Set(),reps:0,dayCls:{}};});
+    (logs||[]).forEach(r=>{const u=acc[r.user_id]; if(!u)return; const p=normalizeEntry(r.payload); let logged=false; p.sessions.forEach(s=>{u.reps+=sessReps(s); if(sessLogged(s))logged=true;}); if(logged)u.days.add(r.log_date); const cls=workoutDayClass(p); if(cls)u.dayCls[r.log_date]=cls;});
     const streakFromDates=set=>{let d=today();if(!set.has(d))d=shiftYmd(d,-1);let n=0;while(set.has(d)){n++;d=shiftYmd(d,-1);}return n;};
-    const rows=Object.keys(acc).map(k=>{const u=acc[k];const ds=[...u.days];return{id:u.id,name:u.name,reps:u.reps,streak:streakFromDates(u.days),wk:ds.filter(d=>d>=ws&&d<=we).length,mo:ds.filter(d=>d.slice(0,7)===moPre).length,yr:ds.filter(d=>d.slice(0,4)===yrPre).length};});
+    const rows=Object.keys(acc).map(k=>{const u=acc[k];const ds=[...u.days];return{id:u.id,name:u.name,reps:u.reps,streak:streakFromDates(u.days),dayCls:u.dayCls,wk:ds.filter(d=>d>=ws&&d<=we).length,mo:ds.filter(d=>d.slice(0,7)===moPre).length,yr:ds.filter(d=>d.slice(0,4)===yrPre).length};});
     rows.sort((a,b)=>b.wk-a.wk||b.streak-a.streak);
     const active=rows.some(r=>r.wk>0);
+    const weekDays=[]; {let d=new Date(ws+"T00:00:00Z"); for(let i=0;i<7;i++){weekDays.push(d.toISOString().slice(0,10)); d.setUTCDate(d.getUTCDate()+1);}}
+    const DOW=["S","M","T","W","T","F","S"];
     board.innerHTML=rows.map((r,i)=>{
       const lead=active&&i===0;
       const tub=active&&i===rows.length-1&&rows.length>1&&(r.wk<rows[0].wk||r.streak<rows[0].streak);
-      return '<div class="crewrow'+(ME&&r.id===ME.id?' me':'')+'"><div class="crewrank">'+(lead?'👑':tub?'🪣':(i+1))+'</div><div class="crewbody"><div class="crewname">'+esc(r.name)+(ME&&r.id===ME.id?' (you)':'')+(tub?' <span style="color:var(--ember);font-size:12px">· Tub-o-Shit 💩</span>':'')+'</div><div class="crewmini"><span><b>'+r.wk+'</b>this wk</span><span><b>🔥'+r.streak+'</b>streak</span><span><b>'+r.mo+'</b>this mo</span><span><b>'+r.yr+'</b>this yr</span></div></div></div>';
+      const dots=weekDays.map((d,di)=>'<div class="wd '+(r.dayCls[d]||"")+(d>tStr?" future":"")+(d===tStr?" today":"")+'" title="'+d+'"><span>'+DOW[di]+'</span></div>').join('');
+      return '<div class="crewrow'+(ME&&r.id===ME.id?' me':'')+'"><div class="crewrank">'+(lead?'👑':tub?'🪣':(i+1))+'</div><div class="crewbody"><div class="crewname">'+esc(r.name)+(ME&&r.id===ME.id?' (you)':'')+(tub?' <span style="color:var(--ember);font-size:12px">· Tub-o-Shit 💩</span>':'')+'</div><div class="crewmini"><span><b>'+r.wk+'</b>this wk</span><span><b>🔥'+r.streak+'</b>streak</span><span><b>'+r.mo+'</b>this mo</span><span><b>'+r.yr+'</b>this yr</span></div><div class="weekdots">'+dots+'</div></div></div>';
     }).join('');
     await renderWall();
   }catch(e){console.warn(e);board.innerHTML='<p class="note">Couldn\u2019t load crew stats.</p>';}
