@@ -273,6 +273,22 @@
   .ccdone{margin-top:14px;color:var(--good);font-weight:700;font-size:14px}
   .ccbtns{display:flex;gap:10px;margin-top:18px}
   .ccchange,.ccswitch{flex:1;background:var(--panel-2);border:1px solid var(--line);color:var(--ink);font-family:inherit;font-weight:700;font-size:13px;padding:11px;border-radius:10px;cursor:pointer}
+  .oura{display:flex;gap:12px;align-items:center;padding:12px 14px;margin-bottom:12px;border-radius:14px;background:linear-gradient(180deg,rgba(123,209,224,.12),rgba(123,209,224,.03));border:1px solid rgba(123,209,224,.3)}
+  .oura .orcol{display:flex;flex-direction:column;align-items:center;min-width:52px}
+  .oura .orv{font-family:'Anton';font-size:26px;line-height:1;color:var(--ink)}
+  .oura .orv.lo{color:var(--ember)}.oura .orv.hi{color:var(--good)}.oura .orv.mid{color:var(--gold)}
+  .oura .orl{font-size:10px;letter-spacing:.06em;color:var(--faint);text-transform:uppercase;margin-top:3px}
+  .oura .ormsg{flex:1;font-size:13px;line-height:1.45;color:var(--muted)}
+  .oura .ormsg b{color:var(--ink)}
+  .ourin{width:100%;background:var(--panel-2);border:1px solid var(--line);color:var(--ink);font-family:inherit;font-size:14px;padding:11px 12px;border-radius:10px;margin:8px 0}
+  .ourlead{color:var(--muted);font-size:13px;line-height:1.5}
+  .ourlead a{color:var(--sky,#7bd1e0)}
+  .ourbtn{width:100%;background:#7bd1e0;color:#07222a;border:none;font-family:'Anton';font-size:16px;letter-spacing:.03em;padding:12px;border-radius:12px;cursor:pointer}
+  .ourstat{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--ink);margin-bottom:8px}
+  .ourstat .dot{width:8px;height:8px;border-radius:50%;background:var(--good)}
+  .ourline{display:flex;gap:16px;margin:10px 0}
+  .ourline .b{font-family:'Anton';font-size:22px;color:var(--ink)}.ourline small{display:block;color:var(--faint);font-size:11px;letter-spacing:.05em;text-transform:uppercase}
+  .ourdis{background:none;border:1px solid var(--line);color:var(--muted);font-family:inherit;font-weight:700;font-size:13px;padding:9px;border-radius:10px;cursor:pointer;width:100%;margin-top:4px}
   .ex-replace,.ex-reset{flex:1;background:var(--panel-2);border:1px solid var(--line);color:var(--ink);font-family:inherit;font-weight:700;font-size:14px;padding:10px;border-radius:10px;cursor:pointer}
   .ex-replace{border-color:rgba(255,106,61,.45);color:var(--ember)}
   .ex-replace:disabled{opacity:.6}
@@ -452,6 +468,7 @@
   <section id="view-today">
     <div class="daynavwrap" id="dayNav"></div>
     <div class="pfocus hide" id="planFocus"></div>
+    <div class="oura hide" id="ouraBanner"></div>
     <div class="card">
       <span class="eyebrow">Tonight&#39;s session</span>
       <div class="focus">
@@ -573,6 +590,10 @@
       </div>
       <button id="pfSave" type="button" class="finish" style="font-size:18px;margin-top:12px">SAVE PROFILE</button>
       <p class="note" style="margin-top:10px">Your sex, body type, and goals set your food targets and tune the rep ranges. Loads and reps also adapt to your gear — heavier means fewer reps. Enter up to three of each bell and mark single or pair.</p>
+    </div>
+    <div class="card tight">
+      <span class="eyebrow">💍 Oura ring <span style="color:var(--faint)">optional</span></span>
+      <div id="ouraBox"></div>
     </div>
     <div class="card">
       <span class="eyebrow">Gear coach · what to buy next</span>
@@ -757,6 +778,63 @@ async function pushDate(d,immediate){
   clearTimeout(pushTimers[d]); pushTimers[d]=setTimeout(go,500); // debounce typing
 }
 function persist(d){ pushDate(d); }
+
+/* ---- Oura ring (per-user personal access token, kept only in this browser) ---- */
+let OURA_DATA=null;
+function ouraKey(){return "nightlift_oura_"+(ME?ME.id:"anon");}
+function ouraToken(){return store.get(ouraKey())||"";}
+function setOuraToken(t){store.set(ouraKey(),t||"");}
+async function ouraFetch(ep,start,end){
+  const tok=ouraToken(); if(!tok)return null;
+  const r=await fetch(SB_URL+"/functions/v1/oura-proxy",{method:"POST",headers:{"Content-Type":"application/json","apikey":SB_ANON_KEY,"Authorization":"Bearer "+SB_ANON_KEY,"x-oura-token":tok},body:JSON.stringify({ep:ep,start:start,end:end})});
+  if(!r.ok){const e=new Error("oura "+r.status);e.status=r.status;throw e;}
+  return r.json();
+}
+function ouraLast(arr){return (arr&&arr.data&&arr.data.length)?arr.data[arr.data.length-1]:null;}
+async function refreshOura(){
+  if(!ouraToken()){OURA_DATA=null;renderOuraBanner();return;}
+  const end=today(), start=shiftYmd(end,-3);
+  try{
+    const [rd,sl]=await Promise.all([ouraFetch("daily_readiness",start,end),ouraFetch("daily_sleep",start,end)]);
+    const r=ouraLast(rd), s=ouraLast(sl);
+    OURA_DATA={readiness:r?r.score:null,sleep:s?s.score:null,day:(r&&r.day)||(s&&s.day)||end,err:null};
+  }catch(e){ OURA_DATA={err:e.status===401?"auth":"net"}; }
+  renderOuraBanner(); renderOuraBox();
+}
+function ouraVerdict(rd){
+  if(rd==null)return{cls:"mid",msg:"Readiness not in yet. Go by feel tonight."};
+  if(rd>=85)return{cls:"hi",msg:"<b>Primed.</b> Recovery is high. Good night to push weight or add the bonus round."};
+  if(rd>=70)return{cls:"hi",msg:"<b>Good to go.</b> Solid recovery. Train as planned."};
+  if(rd>=60)return{cls:"mid",msg:"<b>Middling.</b> Train, but keep it honest. Skip the bonus if it feels forced."};
+  return{cls:"lo",msg:"<b>Back off.</b> Recovery is low. Lighter loads, hit your reps, skip extras."};
+}
+function renderOuraBanner(){
+  const el=document.getElementById("ouraBanner"); if(!el)return;
+  if(!OURA_DATA||OURA_DATA.err||OURA_DATA.readiness==null&&OURA_DATA.sleep==null){el.classList.add("hide");el.innerHTML="";return;}
+  const v=ouraVerdict(OURA_DATA.readiness);
+  let cols="";
+  if(OURA_DATA.readiness!=null)cols+='<div class="orcol"><span class="orv '+v.cls+'">'+OURA_DATA.readiness+'</span><span class="orl">Ready</span></div>';
+  if(OURA_DATA.sleep!=null)cols+='<div class="orcol"><span class="orv '+(OURA_DATA.sleep>=80?"hi":OURA_DATA.sleep>=65?"mid":"lo")+'">'+OURA_DATA.sleep+'</span><span class="orl">Sleep</span></div>';
+  el.innerHTML=cols+'<div class="ormsg">'+v.msg+'</div>';
+  el.classList.remove("hide");
+}
+function renderOuraBox(){
+  const box=document.getElementById("ouraBox"); if(!box)return;
+  if(ouraToken()){
+    let stat="<div class=\"ourstat\"><span class=\"dot\"></span>Connected</div>";
+    if(OURA_DATA&&OURA_DATA.err==="auth")stat="<div class=\"ourstat\"><span class=\"dot\" style=\"background:var(--ember)\"></span>Token rejected — reconnect below</div>";
+    else if(OURA_DATA&&OURA_DATA.err)stat="<div class=\"ourstat\"><span class=\"dot\" style=\"background:var(--gold)\"></span>Connected — couldn’t reach Oura just now</div>";
+    let line="";
+    if(OURA_DATA&&!OURA_DATA.err){line='<div class="ourline"><div><span class="b">'+(OURA_DATA.readiness??"—")+'</span><small>Readiness</small></div><div><span class="b">'+(OURA_DATA.sleep??"—")+'</span><small>Sleep</small></div></div>';}
+    box.innerHTML=stat+line+'<p class="ourlead">Your readiness and sleep scores show up as a banner on the Tonight tab to tell you whether to push or back off.</p><button class="ourdis" id="ourDisc" type="button">Disconnect Oura</button>';
+    box.querySelector("#ourDisc").onclick=()=>{setOuraToken("");OURA_DATA=null;renderOuraBox();renderOuraBanner();};
+  } else {
+    box.innerHTML='<p class="ourlead">Paste your Oura personal access token to show readiness and sleep here. Create one at <a href="https://cloud.ouraring.com/personal-access-tokens" target="_blank" rel="noopener">cloud.ouraring.com</a> → Personal Access Tokens. It stays on this device only — not shared with the crew.</p>'+
+      '<input class="ourin" id="ourTok" type="password" placeholder="Paste token (starts with a long string)" autocomplete="off">'+
+      '<button class="ourbtn" id="ourConn" type="button">Connect Oura</button>';
+    box.querySelector("#ourConn").onclick=async()=>{const t=box.querySelector("#ourTok").value.trim();if(!t)return;const b=box.querySelector("#ourConn");b.textContent="Checking…";b.disabled=true;setOuraToken(t);try{await refreshOura();if(OURA_DATA&&OURA_DATA.err==="auth"){setOuraToken("");alert("That token was rejected by Oura. Double-check you copied the whole thing.");}}catch(e){}renderOuraBox();};
+  }
+}
 
 /* ---- per-user profile (height / weight / exercise swaps) ---- */
 async function loadProfile(){
@@ -1650,6 +1728,7 @@ async function renderCrew(){
   buildFitRows();
   buildEqRows();
   renderGear();
+  renderOuraBox();
   if(!cloud){board.innerHTML='<p class="note">Crew stats need a connection.</p>';return;}
   board.innerHTML='<p class="note">Loading…</p>';
   try{
@@ -1991,10 +2070,27 @@ async function logBody(weight,waist){
   if(row){ if(w!=null)row.w=w; if(wa!=null)row.waist=wa; }
   else { row={date:t,w:w,waist:wa}; BODY.push(row); sortBody(); }
   saveBodyLocal(); renderBody();
+  if(w!=null)syncWeightToProfile(w);
   const to=document.getElementById("toast");if(to){to.textContent="Saved. 💪";to.classList.add("show");setTimeout(()=>{to.classList.remove("show");to.textContent="Logged. Nice work. 💪";},1400);}
   if(cloud){try{await sb.from(T_BODY).upsert({user_id:ME.id,log_date:t,weight:row.w,waist:row.waist,updated_at:new Date().toISOString()},{onConflict:"user_id,log_date"});}catch(e){console.warn("body upsert",e);}}
 }
 async function delBody(date){BODY=BODY.filter(r=>r.date!==date);saveBodyLocal();renderBody();if(cloud){try{await sb.from(T_BODY).delete().eq("user_id",ME.id).eq("log_date",date);}catch(e){console.warn("body del",e);}}}
+/* ---- keep bodyweight in sync between the Body tab and the Crew profile ---- */
+function syncWeightToProfile(w){
+  if(w==null)return; const s=String(w); if(PROFILE.weight===s)return;
+  PROFILE.weight=s; saveProfile();
+  const pw=document.getElementById("pfW"); if(pw)pw.value=s;
+  const wl=document.getElementById("whoLine"); if(wl&&ME)wl.textContent=(PROFILE.name||ME.name)+(PROFILE.height?" · "+PROFILE.height:"")+(PROFILE.weight?" · "+PROFILE.weight:"");
+  if(typeof renderFood==="function"){try{renderFood();}catch(e){}}
+}
+async function syncWeightToBody(wStr){
+  const w=bodyNum(wStr); if(w==null)return; const t=today();
+  let row=BODY.find(r=>r.date===t);
+  if(row){ if(row.w===w)return; row.w=w; } else { row={date:t,w:w,waist:null}; BODY.push(row); sortBody(); }
+  saveBodyLocal();
+  const v=document.getElementById("view-body"); if(v&&!v.classList.contains("hide"))renderBody();
+  if(cloud){try{await sb.from(T_BODY).upsert({user_id:ME.id,log_date:t,weight:row.w,waist:row.waist==null?null:row.waist,updated_at:new Date().toISOString()},{onConflict:"user_id,log_date"});}catch(e){console.warn("body upsert",e);}}
+}
 function svgTrend(series,opts){
   opts=opts||{};const color=opts.color||"var(--ember)";const unit=opts.unit||"";
   const pts=series.filter(p=>p.val!=null);
@@ -2200,7 +2296,7 @@ function readFit(){
 }
 document.querySelectorAll("#kindSeg button").forEach(b=>b.onclick=()=>{document.querySelectorAll("#kindSeg button").forEach(x=>x.classList.remove("on"));b.classList.add("on");});
 document.getElementById("msgSend").onclick=sendMsg;
-document.getElementById("pfSave").onclick=()=>{PROFILE.height=document.getElementById("pfH").value.trim();PROFILE.weight=document.getElementById("pfW").value.trim();PROFILE.equipment={kb:readEq("kb"),db:readEq("db")};PROFILE.fit=readFit();saveProfile();renderToday();buildFitRows();buildEqRows();renderGear();if(typeof renderFood==="function")renderFood();const b=document.getElementById("pfSave");b.textContent="SAVED ✓";setTimeout(()=>b.textContent="SAVE PROFILE",1200);};
+document.getElementById("pfSave").onclick=()=>{PROFILE.height=document.getElementById("pfH").value.trim();PROFILE.weight=document.getElementById("pfW").value.trim();PROFILE.equipment={kb:readEq("kb"),db:readEq("db")};PROFILE.fit=readFit();saveProfile();syncWeightToBody(PROFILE.weight);renderToday();buildFitRows();buildEqRows();renderGear();if(typeof renderFood==="function")renderFood();const b=document.getElementById("pfSave");b.textContent="SAVED ✓";setTimeout(()=>b.textContent="SAVE PROFILE",1200);};
 var _lo=document.getElementById("logoutBottom"); if(_lo)_lo.onclick=()=>{store.set("nightlift_code","");try{location.reload();}catch(e){}};
 
 /* ===================== gate + boot ===================== */
@@ -2222,6 +2318,7 @@ async function openApp(){
   await pullBody();
   openDay();
   try{ renderToday(); }catch(e){ console.warn(e); }
+  try{ refreshOura(); }catch(e){}
 }
 const gi=document.getElementById("gateInput"),gb=document.getElementById("gateBtn"),gh=document.querySelector("#gate .hint");
 function tryUnlock(){
