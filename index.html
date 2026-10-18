@@ -249,6 +249,30 @@
   .armhdr{margin-top:18px;padding:4px 2px;color:#b9adff;font-family:'Anton';font-size:17px;letter-spacing:.05em;display:flex;align-items:baseline;gap:8px}
   .armhdr span{font-family:'Hanken Grotesk',sans-serif;font-size:12px;font-weight:600;letter-spacing:.02em;color:var(--faint);text-transform:none}
   .armrm{width:100%;margin-top:10px;background:none;border:1px solid var(--line);color:var(--muted);font-family:inherit;font-weight:700;font-size:13px;padding:9px;border-radius:10px;cursor:pointer}
+  .classpick{padding:2px}
+  .classlead{color:var(--muted);font-size:13px;line-height:1.5;margin-bottom:14px}
+  .classgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .classchip{display:flex;align-items:center;gap:9px;text-align:left;background:var(--panel-2);border:1px solid var(--line);color:var(--ink);font-family:inherit;font-weight:700;font-size:14px;padding:12px 12px;border-radius:12px;cursor:pointer;transition:.12s}
+  .classchip span{font-size:19px;line-height:1}
+  .classchip.on{border-color:var(--ember);color:var(--ember);background:rgba(255,106,61,.09)}
+  .classdur{margin-top:16px}
+  .classdur>label{display:block;font-family:'Anton';font-size:14px;letter-spacing:.05em;color:var(--muted);margin-bottom:8px;text-transform:uppercase}
+  .durrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .durchip{background:var(--panel-2);border:1px solid var(--line);color:var(--muted);font-family:inherit;font-weight:700;font-size:14px;padding:10px 14px;border-radius:10px;cursor:pointer}
+  .durchip.on{border-color:var(--ember);color:var(--ember);background:rgba(255,106,61,.09)}
+  .durrow input{flex:1;min-width:70px;background:var(--panel-2);border:1px solid var(--line);color:var(--ink);font-family:inherit;font-weight:700;font-size:15px;padding:10px 12px;border-radius:10px}
+  .classburn{min-height:18px;margin-top:12px;color:var(--gold);font-family:'Anton';font-size:16px;letter-spacing:.04em}
+  .classbtns{display:flex;gap:10px;margin-top:14px}
+  .classlog{flex:2;background:var(--ember);color:#1a0d06;border:none;font-family:'Anton';font-size:17px;letter-spacing:.03em;padding:14px;border-radius:12px;cursor:pointer}
+  .classlog:disabled{background:var(--panel-2);color:var(--faint);cursor:default}
+  .classcancel{flex:1;background:none;border:1px solid var(--line);color:var(--muted);font-family:inherit;font-weight:700;font-size:14px;padding:14px;border-radius:12px;cursor:pointer}
+  .classcard{text-align:center;padding:26px 16px;background:linear-gradient(180deg,rgba(255,106,61,.09),rgba(255,106,61,.02));border:1px solid rgba(255,106,61,.3);border-radius:16px}
+  .cchero{font-size:52px;line-height:1}
+  .cctype{margin-top:10px;font-family:'Anton';font-size:26px;letter-spacing:.02em;color:var(--ink)}
+  .ccmeta{margin-top:4px;color:var(--muted);font-size:14px}
+  .ccdone{margin-top:14px;color:var(--good);font-weight:700;font-size:14px}
+  .ccbtns{display:flex;gap:10px;margin-top:18px}
+  .ccchange,.ccswitch{flex:1;background:var(--panel-2);border:1px solid var(--line);color:var(--ink);font-family:inherit;font-weight:700;font-size:13px;padding:11px;border-radius:10px;cursor:pointer}
   .ex-replace,.ex-reset{flex:1;background:var(--panel-2);border:1px solid var(--line);color:var(--ink);font-family:inherit;font-weight:700;font-size:14px;padding:10px;border-radius:10px;cursor:pointer}
   .ex-replace{border-color:rgba(255,106,61,.45);color:var(--ember)}
   .ex-replace:disabled{opacity:.6}
@@ -1253,6 +1277,63 @@ function ymdTZ(d){ if(!_tzFmt) return ymd(d); const p={}; for(const x of _tzFmt.
 function today(){return ymdTZ(new Date(Date.now()-DAY_CUTOFF_H*3600*1000));}
 function fmtNice(d){return new Date(d+"T12:00:00Z").toLocaleDateString(undefined,{weekday:'long',month:'short',day:'numeric',timeZone:'UTC'});}
 function newSession(w){return {id:"s"+Date.now().toString(36)+Math.floor(Math.random()*1e3),workout:w||"A",sets:{},done:false,ts:Date.now()};}
+/* ---- outside-the-app classes ---- */
+const CLASSES=[
+ {t:"Pilates",e:"🧘",met:3.5},
+ {t:"Hot yoga",e:"🔥",met:5},
+ {t:"Yoga",e:"🧘‍♀️",met:3},
+ {t:"HIIT class",e:"⚡",met:8},
+ {t:"Spin / cycling",e:"🚴",met:7.5},
+ {t:"Barre",e:"🩰",met:4},
+ {t:"CrossFit",e:"🏋️",met:8},
+ {t:"Bootcamp",e:"🥾",met:8},
+ {t:"Swimming",e:"🏊",met:7},
+ {t:"Running",e:"🏃",met:9.8},
+ {t:"Walk / hike",e:"🚶",met:4},
+ {t:"Rowing",e:"🚣",met:7},
+ {t:"Kickboxing",e:"🥊",met:7.5},
+ {t:"Dance / Zumba",e:"💃",met:6},
+ {t:"Climbing",e:"🧗",met:8},
+ {t:"Other class",e:"🤸",met:5}
+];
+let classPick=false, pickType="", pickMins=0;
+function classMet(t){const c=CLASSES.find(x=>x.t===t);return c?c.met:5;}
+function classEmoji(t){const c=CLASSES.find(x=>x.t===t);return c?c.e:"🤸";}
+function classBurn(t,mins){const w=parseFloat(PROFILE.weight)||170;const kg=w/2.205;return Math.round(classMet(t)*kg*((+mins||0)/60));}
+function startClassPick(){ if(sessLogged(S)||S.klass){ entry.sessions.push(newSession("")); setActive(entry.sessions.length-1); } pickType="";pickMins=0;classPick=true; renderToday(); }
+function logClass(t,mins){ S.klass={type:t,mins:+mins||0}; S.done=true; S.sets={}; S.bonus=false; S.armboost=false; S.workout=""; classPick=false; persist(currentDate); renderToday(); }
+function removeClass(){ S.klass=null; S.done=false; S.workout=autoWorkout(); classPick=false; persist(currentDate); renderToday(); }
+function cancelClassPick(){ classPick=false; if(!S.klass&&!sessLogged(S)&&entry.sessions.length>1){ entry.sessions.splice(curSess,1); setActive(entry.sessions.length-1); } if(!S.workout)S.workout=autoWorkout(); renderToday(); }
+function classPickerEl(){
+  const d=document.createElement("div");d.className="classpick";
+  const chips=CLASSES.map(c=>'<button class="classchip'+(pickType===c.t?' on':'')+'" data-t="'+esc(c.t)+'" type="button"><span>'+c.e+'</span>'+esc(c.t)+'</button>').join('');
+  d.innerHTML='<div class="classlead">Did a workout outside the app? Log it here — it counts as a trained day and keeps your streak going.</div>'+
+    '<div class="classgrid">'+chips+'</div>'+
+    '<div class="classdur"><label>Duration</label><div class="durrow">'+
+      [30,45,60,75,90].map(m=>'<button class="durchip'+(pickMins===m?' on':'')+'" data-m="'+m+'" type="button">'+m+'m</button>').join('')+
+      '<input type="number" inputmode="numeric" min="1" id="classMins" placeholder="min" value="'+(pickMins||"")+'"></div></div>'+
+    '<div class="classburn" id="classBurn"></div>'+
+    '<div class="classbtns"><button class="classlog" id="classLog" type="button" disabled>Log class</button><button class="classcancel" id="classCancel" type="button">Cancel</button></div>';
+  const upd=()=>{const lg=d.querySelector("#classLog");const bn=d.querySelector("#classBurn");if(pickType&&pickMins>0){lg.disabled=false;bn.textContent="≈ "+classBurn(pickType,pickMins)+" cal burned";}else{lg.disabled=true;bn.textContent="";}};
+  d.querySelectorAll(".classchip").forEach(b=>b.onclick=()=>{pickType=b.dataset.t;d.querySelectorAll(".classchip").forEach(x=>x.classList.toggle("on",x===b));upd();});
+  d.querySelectorAll(".durchip").forEach(b=>b.onclick=()=>{pickMins=+b.dataset.m;d.querySelector("#classMins").value=pickMins;d.querySelectorAll(".durchip").forEach(x=>x.classList.toggle("on",x===b));upd();});
+  d.querySelector("#classMins").addEventListener("input",e=>{pickMins=+e.target.value||0;d.querySelectorAll(".durchip").forEach(x=>x.classList.remove("on"));upd();});
+  d.querySelector("#classLog").onclick=()=>{if(pickType&&pickMins>0)logClass(pickType,pickMins);};
+  d.querySelector("#classCancel").onclick=()=>cancelClassPick();
+  upd();
+  return d;
+}
+function classCardEl(){
+  const k=S.klass;const d=document.createElement("div");d.className="classcard";
+  d.innerHTML='<div class="cchero">'+classEmoji(k.type)+'</div>'+
+    '<div class="cctype">'+esc(k.type)+'</div>'+
+    '<div class="ccmeta">'+k.mins+' min · ≈ '+classBurn(k.type,k.mins)+' cal burned</div>'+
+    '<div class="ccdone">✓ Logged as tonight’s training</div>'+
+    '<div class="ccbtns"><button class="ccchange" type="button">Change class</button><button class="ccswitch" type="button">Switch to a workout</button></div>';
+  d.querySelector(".ccchange").onclick=()=>{pickType=k.type;pickMins=k.mins;classPick=true;renderToday();};
+  d.querySelector(".ccswitch").onclick=()=>removeClass();
+  return d;
+}
 function normalizeEntry(e){
   if(!e)return{creatine:false,sessions:[]};
   if(Array.isArray(e.sessions)){e.creatine=!!e.creatine;e.sessions.forEach(s=>{if(!s.sets)s.sets={};});return e;}
@@ -1261,8 +1342,8 @@ function normalizeEntry(e){
 function ensure(date){const e=normalizeEntry(DB[date]);DB[date]=e;return e;}
 function allSessions(){const out=[];Object.keys(DB).forEach(d=>{normalizeEntry(DB[d]).sessions.forEach(s=>out.push({d,s}));});out.sort((a,b)=>a.d<b.d?-1:a.d>b.d?1:((a.s.ts||0)-(b.s.ts||0)));return out;}
 function sessReps(s){let t=0;Object.values(s.sets||{}).forEach(a=>a.forEach(v=>t+=(+v||0)));return t;}
-function sessLogged(s){return !!(s.done||Object.values(s.sets||{}).some(a=>a&&a.some(v=>+v>0)));}
-function sessHasNums(s){return Object.values(s.sets||{}).some(a=>a&&a.some(v=>+v>0));}
+function sessLogged(s){return !!(s.klass||s.done||Object.values(s.sets||{}).some(a=>a&&a.some(v=>+v>0)));}
+function sessHasNums(s){return !!s.klass||Object.values(s.sets||{}).some(a=>a&&a.some(v=>+v>0));}
 /* ---- plateau / stall detection (opt-in rotation) ---- */
 let STALL_DISMISS={};
 function stallKey(){return "nightlift_stall_"+(ME?ME.id:"anon");}
@@ -1273,14 +1354,14 @@ function isStalled(id){const dm=STALL_DISMISS[id]||0;if(Date.now()-dm<14*864e5)r
 function autoWorkout(){const dn=allSessions().filter(x=>x.s.done&&x.s.workout);if(!dn.length)return"A";const last=dn[dn.length-1].s.workout;return ORDER[(ORDER.indexOf(last)+1)%4];}
 let currentDate=today(), entry=ensure(currentDate), curSess=0, S=null;
 if(!entry.sessions.length) entry.sessions.push(newSession(autoWorkout()));
-function setActive(i){curSess=Math.max(0,Math.min(entry.sessions.length-1,i));S=entry.sessions[curSess];}
+function setActive(i){curSess=Math.max(0,Math.min(entry.sessions.length-1,i));S=entry.sessions[curSess];classPick=false;}
 function openDay(){currentDate=today();entry=ensure(currentDate);if(!entry.sessions.length)entry.sessions.push(newSession(autoWorkout()));setActive(entry.sessions.length-1);}
 setActive(entry.sessions.length-1);
 
 /* ===================== TODAY ===================== */
-function progressPct(){const exs=dayEx(S.workout);let done=0;exs.forEach(ex=>{const s=S.sets[ex.id];if(s&&s.some(v=>+v>0))done++;});return exs.length?Math.round(done/exs.length*100):0;}
+function progressPct(){if(S.klass)return 100;const exs=dayEx(S.workout);let done=0;exs.forEach(ex=>{const s=S.sets[ex.id];if(s&&s.some(v=>+v>0))done++;});return exs.length?Math.round(done/exs.length*100):0;}
 function renderRing(){const p=progressPct();document.getElementById("ringProg").style.strokeDashoffset=201-(201*p/100);document.getElementById("ringPct").textContent=p+"%";}
-function renderDaySwitch(){const c=document.getElementById("daySwitch");c.innerHTML="";ORDER.forEach(k=>{const b=document.createElement("button");b.textContent="Day "+k;if(k===S.workout)b.className="on";b.onclick=()=>{S.workout=k;persist(currentDate);renderToday();};c.appendChild(b);});}
+function renderDaySwitch(){const c=document.getElementById("daySwitch");c.innerHTML="";ORDER.forEach(k=>{const b=document.createElement("button");b.textContent="Day "+k;if(!S.klass&&!classPick&&k===S.workout)b.className="on";b.onclick=()=>{S.klass=null;S.done=false;classPick=false;S.workout=k;persist(currentDate);renderToday();};c.appendChild(b);});const cb=document.createElement("button");cb.textContent="🧘 Class";if(S.klass||classPick)cb.className="on";cb.onclick=()=>{if(classPick){cancelClassPick();}else if(S.klass){pickType=S.klass.type;pickMins=S.klass.mins;classPick=true;renderToday();}else{startClassPick();}};c.appendChild(cb);}
 function shiftYmd(dateStr,delta){const d=new Date(dateStr+"T12:00:00Z");d.setUTCDate(d.getUTCDate()+delta);return d.toISOString().slice(0,10);}
 function fmtShort(d){return new Date(d+"T12:00:00Z").toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric',timeZone:'UTC'});}
 function gotoDay(dateStr){const t=today();if(dateStr>t)dateStr=t;currentDate=dateStr;entry=ensure(currentDate);if(!entry.sessions.length)entry.sessions.push(newSession(autoWorkout()));setActive(entry.sessions.length-1);renderToday();window.scrollTo({top:0,behavior:'smooth'});}
@@ -1317,7 +1398,7 @@ function renderDayNav(){
 function renderSessionBar(){
   const bar=document.getElementById("sessionBar"); if(!bar)return;
   let h="";
-  entry.sessions.forEach((s,i)=>{h+='<button class="schip'+(i===curSess?' on':'')+(s.done?' done':'')+'" data-i="'+i+'" type="button">'+(s.done?'✓ ':'')+'S'+(i+1)+' · '+esc(s.workout)+'</button>';});
+  entry.sessions.forEach((s,i)=>{const lbl=s.klass?('🧘 '+esc(s.klass.type)):('S'+(i+1)+' · '+esc(s.workout));h+='<button class="schip'+(i===curSess?' on':'')+(s.done?' done':'')+'" data-i="'+i+'" type="button">'+(s.done?'✓ ':'')+lbl+'</button>';});
   h+='<button class="schip add" id="addSess" type="button">＋ Session</button>';
   if(entry.sessions.length>1)h+='<button class="schip del" id="delSess" type="button">✕ Remove S'+(curSess+1)+'</button>';
   bar.innerHTML=h;
@@ -1370,9 +1451,12 @@ function exCard(ex){
   return el;
 }
 function renderExList(){
+  const list=document.getElementById("exList");const ft=document.getElementById("focusTitle");
+  if(classPick){ ft.innerHTML='<small>Outside class</small>Log a class'; list.innerHTML=""; list.appendChild(classPickerEl()); return; }
+  if(S.klass){ ft.innerHTML='<small>Outside class</small>'+esc(S.klass.type); list.innerHTML=""; list.appendChild(classCardEl()); return; }
   const tpl=PROGRAM[S.workout]; const base=dayEx(S.workout); const bex=bonusEx(S.workout);
-  document.getElementById("focusTitle").innerHTML='<small>'+tpl.tag+' · '+base.length+' moves</small>'+tpl.name;
-  const list=document.getElementById("exList");list.innerHTML="";
+  ft.innerHTML='<small>'+tpl.tag+' · '+base.length+' moves</small>'+tpl.name;
+  list.innerHTML="";
   base.forEach(ex=>list.appendChild(exCard(ex)));
   if(bex.length){
     if(S.bonus){
@@ -1416,7 +1500,7 @@ function renderExList(){
 }
 function refreshChecks(){const exs=shownEx();document.querySelectorAll("#exList .ex").forEach((el,i)=>{const ex=exs[i];if(!ex)return;const s=S.sets[ex.id];el.classList.toggle("done",!!(s&&s.some(v=>+v>0)));});}
 function renderCreatine(){document.getElementById("creatineToggle").classList.toggle("on",entry.creatine);}
-function renderFinish(){const b=document.getElementById("finishBtn");b.classList.toggle("done",S.done);b.textContent=S.done?"✓ SESSION LOGGED":(entry.sessions.length>1?"LOG THIS SESSION":"LOG TONIGHT'S WORK");}
+function renderFinish(){const b=document.getElementById("finishBtn");if(classPick){b.classList.remove("done");b.textContent="Pick a class above";return;}if(S.klass){b.classList.add("done");b.textContent="✓ CLASS LOGGED";return;}b.classList.toggle("done",S.done);b.textContent=S.done?"✓ SESSION LOGGED":(entry.sessions.length>1?"LOG THIS SESSION":"LOG TONIGHT'S WORK");}
 function renderToday(){const wl=document.getElementById("whoLine");if(wl)wl.textContent=(PROFILE.name||(ME?ME.name:""))+(PROFILE.height?" · "+PROFILE.height:"")+(PROFILE.weight?" · "+PROFILE.weight:"");document.getElementById("todayDate").textContent=fmtNice(currentDate);const pf=document.getElementById("planFocus");if(pf){const gf=goalFocus();if(gf){pf.innerHTML="🎯 <b>"+esc(gf.label)+"</b> · "+esc(gf.detail.replace(/^Plan tuned for [^:]+: /,""));pf.classList.remove("hide");}else{pf.classList.add("hide");pf.innerHTML="";}}renderDayNav();renderSessionBar();renderDaySwitch();renderExList();renderRing();renderCreatine();renderFinish();updateStreakLine();}
 
 function dayLogged(k){const e=DB[k];if(!e)return false;return normalizeEntry(e).sessions.some(sessLogged);}
@@ -1427,6 +1511,7 @@ function showDayDetail(k){
   let html="";
   n.sessions.forEach(s=>{
     if(!sessLogged(s))return;
+    if(s.klass){html+='<div class="ddsess"><div class="ddwk">🧘 '+esc(s.klass.type)+'<b>'+s.klass.mins+' min</b></div><div class="ddrow"><span class="ddname" style="color:var(--muted)">Outside class · ≈ '+classBurn(s.klass.type,s.klass.mins)+' cal burned</span></div></div>';return;}
     const P=PROGRAM[s.workout];
     const wk=P?(P.tag+" · "+P.name):("Day "+s.workout);
     const names=exNamesFor(s.workout);
@@ -1456,7 +1541,7 @@ function computeStreak(){let d=today();if(!dayLogged(d))d=shiftYmd(d,-1);let s=0
 function updateStreakLine(){const s=computeStreak();const el=document.getElementById("streakLine");const lg=dayLogged(currentDate);el.textContent=lg?("🔥 "+s+"-day streak — locked in."):(s>0?("🔥 "+s+"-day streak going. Log tonight to keep it alive."):"Log a session to start your streak.");}
 
 document.getElementById("creatineToggle").onclick=()=>{entry.creatine=!entry.creatine;persist(currentDate);renderCreatine();};
-document.getElementById("finishBtn").onclick=()=>{S.done=!S.done;if(S.done)S.ts=Date.now();persist(currentDate);renderFinish();renderSessionBar();updateStreakLine();if(S.done){const t=document.getElementById("toast");t.classList.add("show");setTimeout(()=>t.classList.remove("show"),1800);}};
+document.getElementById("finishBtn").onclick=()=>{if(S.klass||classPick)return;S.done=!S.done;if(S.done)S.ts=Date.now();persist(currentDate);renderFinish();renderSessionBar();updateStreakLine();if(S.done){const t=document.getElementById("toast");t.classList.add("show");setTimeout(()=>t.classList.remove("show"),1800);}};
 
 /* ===================== PROGRESS ===================== */
 let heatMode="workouts", heatMetric="cal";
