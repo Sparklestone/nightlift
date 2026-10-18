@@ -536,11 +536,6 @@
       <div class="heat" id="heat"></div>
       <p class="note" id="heatNote" style="margin-top:12px">Brighter = more of the session completed. Consistency beats intensity at 47 — show up, log it, repeat.</p>
     </div>
-    <div class="card">
-      <span class="eyebrow">Total reps · last 14 sessions</span>
-      <div class="chartwrap"><div class="bars" id="bars"></div><div class="barx" id="barx"></div></div>
-      <p class="note" style="margin-top:12px" id="volNote"></p>
-    </div>
     <div class="card tight">
       <span class="eyebrow">Data</span>
       <p class="note" style="margin-top:6px">Synced to your private cloud table, cached on this device. <button id="resetBtn" style="background:none;border:1px solid var(--line);color:var(--ember);font-family:inherit;font-weight:700;padding:5px 11px;border-radius:8px;cursor:pointer;margin-left:6px;font-size:12px">Clear everything</button></p>
@@ -1731,14 +1726,6 @@ function renderProgress(){
   const msel=document.getElementById("heatMetric");
   if(msel&&!msel.dataset.filled){msel.dataset.filled="1";msel.value=heatMetric;msel.onchange=()=>{heatMetric=msel.value;renderHeat();};}
   renderHeat();
-  const sess=logged.slice(-14);
-  const bars=document.getElementById("bars"),barx=document.getElementById("barx");bars.innerHTML="";barx.innerHTML="";
-  const vols=sess.map(x=>({d:x.d,w:x.s.workout,tot:sessReps(x.s)}));
-  const max=Math.max(1,...vols.map(v=>v.tot));
-  if(!vols.length)bars.innerHTML='<div style="color:var(--faint);font-size:13px;align-self:center;width:100%;text-align:center">Log a session to see your volume climb.</div>';
-  vols.forEach(v=>{const b=document.createElement("div");b.className="bar"+(v.tot?"":" empty");b.style.height=(v.tot/max*100)+"%";b.title=v.tot+" reps · "+fmtNice(v.d);bars.appendChild(b);const x=document.createElement("span");x.textContent=v.w||"";barx.appendChild(x);});
-  const tr=vols.reduce((a,v)=>a+v.tot,0);
-  document.getElementById("volNote").innerHTML=vols.length?("Total reps across these sessions: <b style='color:var(--ember)'>"+tr+"</b>. Rising bars = progressive overload working."):"";
 }
 
 /* ===================== CREW (group status + wall + weekly crown/tub) ===================== */
