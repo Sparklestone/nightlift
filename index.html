@@ -2065,10 +2065,11 @@ const FOODS=[
  {name:"Sweet tea (12 oz)",emoji:"🧋",p:0,c:30,sug:30,fat:0,cal:120,cat:"soda"},
  {name:"Lemonade (12 oz)",emoji:"🍋",p:0,c:37,sug:35,fat:0,cal:150,cat:"soda"},
  /* water & supplements */
+ {name:"Protein + creatine shake",emoji:"🥤",p:25,c:2,sug:1,fat:1.5,cal:110,cat:"supp"},
  {name:"Whey protein (1 scoop)",emoji:"🥤",p:25,c:2,sug:1,fat:1.5,cal:110,cat:"supp"},
+ {name:"Creatine (5g)",emoji:"💊",p:0,c:0,sug:0,fat:0,cal:0,cat:"supp",zero:true,cr:true},
  {name:"Water (8 oz)",emoji:"💧",p:0,c:0,sug:0,fat:0,cal:0,cat:"supp",zero:true},
- {name:"Water (16 oz)",emoji:"💧",p:0,c:0,sug:0,fat:0,cal:0,cat:"supp",zero:true},
- {name:"Creatine (5g)",emoji:"💊",p:0,c:0,sug:0,fat:0,cal:0,cat:"supp",zero:true}
+ {name:"Water (16 oz)",emoji:"💧",p:0,c:0,sug:0,fat:0,cal:0,cat:"supp",zero:true}
 ];
 const FOOD_CATS=[["recent","🕘 Recent"],["shake","🥤 Protein"],["supp","💧 Water & supps"],["meat","🍗 Meat & eggs"],["fruit","🍎 Fruit"],["veg","🥦 Veg"],["carb","🍚 Carbs"],["dairy","🥛 Dairy"],["snack","🥨 Snacks"],["alcohol","🍺 Alcohol"],["soda","🥤 Soda"]];
 const RECENT_DAYS=7;
@@ -2125,10 +2126,19 @@ async function logFood(item,p,c,cal,sug,fat){
   let ts=Date.now(); if(FOOD.length&&FOOD[FOOD.length-1].ts>=ts)ts=FOOD[FOOD.length-1].ts+1;
   const row={item:String(item||"Food").slice(0,60),p:Math.max(0,+p||0),c:Math.max(0,+c||0),sug:Math.max(0,+sug||0),fat:Math.max(0,+fat||0),cal:Math.max(0,Math.round(+cal||0)),date:today(),ts:ts,id:null};
   FOOD.push(row);saveFoodLocal();renderFood();
+  if(/creatine/i.test(row.item))markCreatineFromFood();
   const t=document.getElementById("toast");if(t){t.textContent="Added. 💪";t.classList.add("show");setTimeout(()=>{t.classList.remove("show");t.textContent="Logged. Nice work. 💪";},1400);}
   if(cloud){try{const {data}=await sb.from(T_FOOD).insert({user_id:ME.id,log_date:row.date,item:row.item,protein:row.p,carbs:row.c,sugar:row.sug,fat:row.fat,cals:row.cal}).select("id").single();if(data&&data.id){row.id=data.id;saveFoodLocal();}}catch(e){console.warn("food insert",e);}}
 }
 async function delFood(row){FOOD=FOOD.filter(r=>r!==row);saveFoodLocal();renderFood();if(cloud&&row.id){try{await sb.from(T_FOOD).delete().eq("id",row.id);}catch(e){console.warn("food del",e);}}}
+/* logging a creatine item flips on the Tonight creatine toggle for today (does not create a workout) */
+function markCreatineFromFood(){
+  const t=today();
+  if(currentDate===t && entry){ if(!entry.creatine)entry.creatine=true; }
+  else { const e=normalizeEntry(DB[t]||{creatine:false,sessions:[]}); e.creatine=true; DB[t]=e; }
+  persist(t);
+  try{ if(currentDate===t) renderCreatine(); }catch(e){}
+}
 function hasManualGoals(){try{const g=JSON.parse(store.get(goalKey()));return !!(g&&typeof g==="object"&&typeof g.p==="number");}catch(e){return false;}}
 function resetGoals(){try{store.set(goalKey(),"");}catch(e){}renderFood();}
 function editGoals(){const g=foodGoals();const p=prompt("Daily protein goal (grams):",g.p);if(p===null)return;const c=prompt("Daily carb goal (grams):",g.c);if(c===null)return;const fat=prompt("Daily fat goal (grams):",g.fat);if(fat===null)return;const sug=prompt("Daily sugar cap — stay under (grams):",g.sug);if(sug===null)return;const cal=prompt("Daily calorie cap — stay under (calories):",g.cal);if(cal===null)return;saveGoals({p:Math.max(0,parseInt(p)||g.p),c:Math.max(0,parseInt(c)||g.c),fat:Math.max(0,parseInt(fat)||g.fat),sug:Math.max(0,parseInt(sug)||g.sug),cal:Math.max(0,parseInt(cal)||g.cal)});renderFood();}
