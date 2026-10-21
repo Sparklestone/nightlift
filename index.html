@@ -29,6 +29,14 @@
   #ptr .ic{font-size:22px;font-weight:700;display:inline-block;will-change:transform}
   #ptr.spin .ic{animation:ptrspin .7s linear infinite}
   @keyframes ptrspin{to{transform:rotate(360deg)}}
+  .pokes{position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.6);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:24px;padding-top:max(24px,env(safe-area-inset-top));overflow-y:auto}
+  .poke{width:100%;max-width:380px;background:var(--panel);border:1px solid var(--line);border-left:5px solid var(--ember);border-radius:16px;padding:16px 18px;cursor:pointer;box-shadow:0 14px 44px rgba(0,0,0,.55);animation:pokein .24s ease}
+  .poke.sup{border-left-color:var(--good)}
+  .poke .pmeta{font-size:13px;color:var(--muted);margin-bottom:6px}
+  .poke .pmeta b{color:var(--ink)}
+  .poke .pbody{font-size:17px;color:var(--ink);line-height:1.4;font-weight:600}
+  .poke .phint{margin-top:11px;font-size:11px;color:var(--faint);letter-spacing:.05em;text-transform:uppercase}
+  @keyframes pokein{from{transform:translateY(-14px) scale(.96);opacity:0}to{transform:none;opacity:1}}
   body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(900px 500px at 78% -8%, rgba(255,106,61,.16), transparent 60%),radial-gradient(700px 600px at -10% 12%, rgba(231,192,105,.07), transparent 55%)}
   body::after{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.04;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
   .wrap{position:relative;z-index:1;max-width:680px;margin:0 auto;padding:0 18px 120px}
@@ -468,6 +476,7 @@
 </head>
 <body>
 <div id="ptr"><span class="ic">↻</span></div>
+<div id="pokes" class="pokes hide"></div>
 
 <!-- ===================== GATE ===================== -->
 <div id="gate">
@@ -1855,6 +1864,36 @@ async function sendMsg(){
   catch(e){alert("Couldn't send: "+e.message);}
 }
 
+/* ---- incoming taunts/support pop up as dismissible floats on next open ---- */
+function wallSeenKey(){return "nightlift_wallseen_"+(ME?ME.id:"anon");}
+function getWallSeen(){let v=null;try{v=store.get(wallSeenKey());}catch(e){}if(!v){v=new Date().toISOString();try{store.set(wallSeenKey(),v);}catch(e){}}return v;}
+function setWallSeen(ts){try{if(ts)store.set(wallSeenKey(),ts);}catch(e){}}
+async function checkPokes(){
+  if(!cloud||!ME)return;
+  const seen=getWallSeen();
+  let data;
+  try{
+    const r=await sb.from(T_WALL).select("from_name,from_id,to_id,kind,body,created_at")
+      .or("to_id.eq."+ME.id+",to_id.eq.all,to_id.is.null")
+      .neq("from_id",ME.id).gt("created_at",seen)
+      .order("created_at",{ascending:true}).limit(25);
+    data=r.data;
+  }catch(e){console.warn("pokes",e);return;}
+  if(!data||!data.length)return;
+  const ov=document.getElementById("pokes"); if(!ov)return;
+  const newest=data[data.length-1].created_at;
+  const close=()=>{setWallSeen(newest);ov.innerHTML="";ov.classList.add("hide");};
+  ov.innerHTML="";
+  data.slice().reverse().forEach(m=>{
+    const el=document.createElement("div");el.className="poke"+(m.kind==="support"?" sup":"");
+    el.innerHTML='<div class="pmeta">'+(m.kind==="support"?"💪 ":"🔥 ")+'<b>'+esc(m.from_name||m.from_id)+'</b> '+(m.kind==="support"?"has your back":"is talking trash")+'</div><div class="pbody">'+esc(m.body)+'</div><div class="phint">Tap to dismiss</div>';
+    el.onclick=(e)=>{e.stopPropagation();el.remove();if(!ov.querySelector(".poke"))close();};
+    ov.appendChild(el);
+  });
+  ov.onclick=close;
+  ov.classList.remove("hide");
+}
+
 /* ===================== RESIST (beat the graze) ===================== */
 const T_RESIST="nightlift_resist";
 let RESIST=[];
@@ -2419,6 +2458,7 @@ async function openApp(){
   openDay();
   try{ renderToday(); }catch(e){ console.warn(e); }
   try{ captureOuraRedirect(); refreshOura(); }catch(e){}
+  try{ checkPokes(); }catch(e){}
 }
 /* ---- pull-to-refresh: drag down past the top to re-pull everything ---- */
 async function appRefresh(){
