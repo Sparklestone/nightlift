@@ -65,11 +65,11 @@
   .brand h1 span{color:var(--ember)}
   .who{text-align:right;font-size:12.5px;color:var(--muted);max-width:150px}
   .who b{color:var(--ink);font-weight:700}
-  .who .sync{display:inline-flex;align-items:center;gap:5px;margin-top:5px;font-size:10.5px;font-weight:700;letter-spacing:.04em;color:var(--faint)}
-  .who .sync .dot{width:7px;height:7px;border-radius:50%;background:var(--faint);transition:.2s}
-  .who .sync.ok .dot{background:var(--good)}
-  .who .sync.sync .dot{background:var(--gold);animation:pulse 1s infinite}
-  .who .sync.off .dot{background:#ff4d4d}
+  .brand .sync{display:inline-flex;align-items:center;gap:6px;margin-top:9px;font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--faint);text-transform:uppercase}
+  .sync .dot{width:7px;height:7px;border-radius:50%;background:var(--faint);transition:.2s}
+  .sync.ok .dot{background:var(--good)}
+  .sync.sync .dot{background:var(--gold);animation:pulse 1s infinite}
+  .sync.off .dot{background:#ff4d4d}
   @keyframes pulse{50%{opacity:.3}}
 
   nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;gap:4px;justify-content:center;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:linear-gradient(to top, rgba(10,10,12,.96) 60%, rgba(10,10,12,0));backdrop-filter:blur(8px)}
@@ -230,7 +230,7 @@
   .stat .n{font-size:38px}
   .stat .l{font-size:12px}
   .who{font-size:14px}
-  .who .sync{font-size:12px}
+  .brand .sync{font-size:12px}
   nav.tabs button{font-size:15px}
   nav.tabs button .ico{font-size:21px}
   .dayswitch button{font-size:15px;padding:10px 15px}
@@ -495,12 +495,10 @@
 <div class="wrap hide" id="appWrap">
   <header>
     <div class="brand">
-      <span class="kic">After-Dark Strength</span>
       <h1>SPARKLE<span>SWOLE</span></h1>
-    </div>
-    <div class="who"><span id="whoLine">—</span><br><b id="todayDate">—</b>
       <span class="sync" id="syncChip"><span class="dot"></span><span id="syncTxt">local</span></span>
     </div>
+    <div class="who"><span id="whoLine">—</span><br><b id="todayDate">—</b></div>
   </header>
 
   <!-- ===================== TODAY ===================== -->
