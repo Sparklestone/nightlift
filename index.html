@@ -1867,16 +1867,18 @@ async function sendMsg(){
 
 /* ---- incoming taunts/support pop up as dismissible floats on next open ---- */
 function wallSeenKey(){return "nightlift_wallseen_"+(ME?ME.id:"anon");}
-function getWallSeen(){let v=null;try{v=store.get(wallSeenKey());}catch(e){}if(!v){v=new Date().toISOString();try{store.set(wallSeenKey(),v);}catch(e){}}return v;}
+function getWallSeen(){try{return store.get(wallSeenKey())||"";}catch(e){return "";}}
 function setWallSeen(ts){try{if(ts)store.set(wallSeenKey(),ts);}catch(e){}}
 async function checkPokes(){
   if(!cloud||!ME)return;
   const seen=getWallSeen();
+  const cutoff=new Date(Date.now()-24*3600*1000).toISOString();   // only messages from the last 24h
+  const since=(seen && seen>cutoff)?seen:cutoff;                   // ...and not ones already dismissed
   let data;
   try{
     const r=await sb.from(T_WALL).select("from_name,from_id,to_id,kind,body,created_at")
       .or("to_id.eq."+ME.id+",to_id.eq.all,to_id.is.null")
-      .neq("from_id",ME.id).gt("created_at",seen)
+      .neq("from_id",ME.id).gt("created_at",since)
       .order("created_at",{ascending:true}).limit(25);
     data=r.data;
   }catch(e){console.warn("pokes",e);return;}
