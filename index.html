@@ -363,6 +363,23 @@
   .pfcheck input:focus-visible+.pfcbox{outline:2px solid var(--ember);outline-offset:2px}
   .pfctxt{font-weight:700;font-size:15px;color:var(--ink);line-height:1.2}
   .pfctxt small{display:block;font-weight:500;font-size:12px;color:var(--faint);text-transform:none;letter-spacing:0;margin-top:2px}
+  .injwrap{margin-top:16px;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .injhead{width:100%;display:flex;align-items:center;justify-content:space-between;background:var(--panel-2);border:none;color:var(--ink);font-family:inherit;font-weight:700;font-size:15px;padding:13px 14px;cursor:pointer}
+  .injhead small{color:var(--ember);font-weight:700;margin-left:8px;font-size:13px}
+  .injchev{color:var(--muted);transition:transform .18s}
+  .injchev.open{transform:rotate(90deg)}
+  .injbody{padding:14px}
+  .injfig{width:170px;max-width:65%;height:auto;display:block;margin:6px auto 4px}
+  .injzone{fill:rgba(255,106,61,0);stroke:var(--muted);stroke-width:2;cursor:pointer;transition:.12s}
+  .injzone:hover{stroke:var(--ember)}
+  .injzone.on{fill:var(--ember);stroke:var(--ember)}
+  .injrow{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--line)}
+  .injlbl{flex:1;min-width:0;font-weight:700;font-size:14px;color:var(--ink)}
+  .injtype{background:var(--panel-2);border:1px solid var(--line);color:var(--ink);font-family:inherit;font-size:13px;padding:7px 9px;border-radius:8px}
+  .injdel{background:none;border:1px solid var(--line);color:var(--muted);font-size:13px;width:30px;height:30px;border-radius:8px;cursor:pointer;flex-shrink:0}
+  .injbanner{background:linear-gradient(180deg,rgba(255,106,61,.12),rgba(255,106,61,.03));border:1px solid rgba(255,106,61,.3);border-radius:12px;padding:12px 14px;margin-bottom:12px;font-size:13px;line-height:1.5;color:var(--muted)}
+  .injbanner b{color:var(--ink)}
+  .injnone{background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:16px;font-size:14px;color:var(--muted);line-height:1.5}
   .fflabel span{color:var(--faint);font-weight:600;text-transform:none;letter-spacing:0;font-size:11px;margin-left:6px}
   .fseg{display:flex;gap:6px}
   .fseg button{flex:1;background:var(--panel-2);border:1px solid var(--line);color:var(--muted);font-family:inherit;font-weight:700;font-size:14px;padding:9px 6px;border-radius:10px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:1px;line-height:1.1}
@@ -621,6 +638,14 @@
       <div class="fgrid" id="pfPhys"></div>
       <label class="fflabel">Focus areas <span>arms · legs · core — always totals 100%, adds or trims sets</span></label>
       <div id="pfFocus"></div>
+      <div class="injwrap">
+        <button type="button" class="injhead" id="injToggle"><span>🩹 Injuries<small id="injCount"></small></span><span class="injchev" id="injChev">▸</span></button>
+        <div class="injbody hide" id="injBody">
+          <p class="note" style="margin-top:0">Tap where you're hurt. Moves that load that area get pulled from your routines until you clear it. This isn't medical advice — listen to your doctor or physical therapist.</p>
+          <svg id="injFig" class="injfig" viewBox="0 0 200 360" aria-label="Body map"></svg>
+          <div id="injList"></div>
+        </div>
+      </div>
       <div class="eqgroup">
         <div class="eqhead">Kettlebells <span>up to 3 · single or pair</span></div>
         <div id="kbRows"></div>
@@ -1105,8 +1130,8 @@ const LEVEL_SWAP={
   d5:{reg:{name:"Knee Plank",load:"Bodyweight",reps:"20–40 sec",pattern:"plank",cues:["Forearms down, knees on the floor, straight line head to knees.","Brace the abs and squeeze the glutes.","Hold steady."],tech:"From the knees first — add seconds, then move to a full plank.",prog:"Straighten the legs for a full plank."}}
 };
 function levelVariant(ex){const f=PROFILE.fit||{};const lvl=f.level;if(!lvl||lvl==="return")return null;const sw=LEVEL_SWAP[ex.id];if(!sw)return null;const v=lvl==="new"?sw.reg:lvl==="pro"?sw.adv:null;if(!v)return null;return Object.assign({},ex,v,{id:ex.id,star:ex.star,lvl:lvl==="new"?"easier":"advanced"});}
-function dayEx(workout){return PROGRAM[workout].ex.map(ex=>{const o=PROFILE.overrides&&PROFILE.overrides[ex.id];const base=o?Object.assign({},ex,o,{id:ex.id,star:0}):(levelVariant(ex)||ex);return applyFocus(applyEquip(base));});}
-function bonusEx(workout){const b=PROGRAM[workout]&&PROGRAM[workout].bonus;return Array.isArray(b)?b.map(ex=>{const o=PROFILE.overrides&&PROFILE.overrides[ex.id];const base=o?Object.assign({},ex,o,{id:ex.id,star:0}):ex;return applyFocus(applyEquip(base));}):[];}
+function dayEx(workout){const ic=injuredCats();return PROGRAM[workout].ex.filter(ex=>!ic[EX_CAT[ex.id]]).map(ex=>{const o=PROFILE.overrides&&PROFILE.overrides[ex.id];const base=o?Object.assign({},ex,o,{id:ex.id,star:0}):(levelVariant(ex)||ex);return applyFocus(applyEquip(base));});}
+function bonusEx(workout){const b=PROGRAM[workout]&&PROGRAM[workout].bonus;const ic=injuredCats();return Array.isArray(b)?b.filter(ex=>!ic[EX_CAT[ex.id]]).map(ex=>{const o=PROFILE.overrides&&PROFILE.overrides[ex.id];const base=o?Object.assign({},ex,o,{id:ex.id,star:0}):ex;return applyFocus(applyEquip(base));}):[];}
 function shownEx(){let l=dayEx(S.workout);if(S&&S.bonus)l=l.concat(bonusEx(S.workout));if(S&&S.armboost){const a=armEx(S.workout);if(a)l=l.concat([a]);}return l;}
 /* Arm Boost — one focused arm-mass move per day, rotating biceps/triceps across the week */
 const ARMBOOST={
@@ -1157,7 +1182,7 @@ const COREBOOST={
 };
 const FBOOST={arms:ARMBOOST,legs:LEGBOOST,core:COREBOOST};
 function topFocusRegion(){const f=PROFILE.fit;if(!f||!f.focus||!f.focus.set)return "arms";const fo=f.focus;const arr=[["arms",+fo.arms||0],["legs",+fo.legs||0],["core",+fo.core||0]].sort((a,b)=>b[1]-a[1]);return arr[0][1]>0?arr[0][0]:"arms";}
-function armEx(workout){const region=topFocusRegion();const a=(FBOOST[region]||ARMBOOST)[workout];if(!a)return null;const o=PROFILE.overrides&&PROFILE.overrides[a.id];const base=o?Object.assign({},a,o,{id:a.id,star:0}):a;return applyEquip(base);}
+function armEx(workout){const region=topFocusRegion();const a=(FBOOST[region]||ARMBOOST)[workout];if(!a)return null;if(injuredCats()[EX_CAT[a.id]])return null;const o=PROFILE.overrides&&PROFILE.overrides[a.id];const base=o?Object.assign({},a,o,{id:a.id,star:0}):a;return applyEquip(base);}
 function poseId(ex){return ex.pattern?(PATTERN_POSE[ex.pattern]||""):ex.id;}
 function esc(s){return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
 
@@ -1217,6 +1242,22 @@ function gearAdvice(){
 }
 /* ===================== exercise bank (offline AI-free swaps) ===================== */
 const EX_CAT={a1:"quads",a2:"hamstrings",a3:"quads",a4:"calves",a5:"forearms",b1:"chest",b2:"chest",b3:"shoulders",b4:"sidedelts",c1:"back",c2:"back",c3:"biceps",c4:"reardelts",c5:"forearms",d1:"posterior",d2:"quads",d3:"chest",d4:"core",d5:"core",a6:"quads",a7:"posterior",b5:"chest",b6:"chest",c6:"biceps",c7:"back",d6:"quads",d7:"core",a8:"triceps",b7:"biceps",c8:"triceps",d8:"biceps",la:"posterior",lb:"quads",lc:"hamstrings",ld:"quads",ka:"core",kb:"core",kc:"core",kd:"core"};
+/* ---- injuries: mark a body area, pull moves that load it out of the routines ---- */
+const INJURY_REGIONS=[
+  {key:"shoulder", label:"Shoulder", cats:["shoulders","sidedelts","reardelts","back"], paired:true,  y:84,  dx:34},
+  {key:"chest",    label:"Chest",    cats:["chest"],                                     paired:false, y:102, dx:0},
+  {key:"upperarm", label:"Upper arm",cats:["biceps","triceps"],                          paired:true,  y:120, dx:46},
+  {key:"forearm",  label:"Forearm / wrist", cats:["forearms"],                           paired:true,  y:172, dx:52},
+  {key:"core",     label:"Core / abs", cats:["core"],                                     paired:false, y:146, dx:0},
+  {key:"lowerback",label:"Lower back", cats:["posterior","hamstrings"],                   paired:false, y:170, dx:0},
+  {key:"thigh",    label:"Thigh",    cats:["quads","hamstrings"],                         paired:true,  y:202, dx:16},
+  {key:"knee",     label:"Knee",     cats:["quads","calves"],                             paired:true,  y:250, dx:16},
+  {key:"calf",     label:"Calf / ankle", cats:["calves"],                                 paired:true,  y:300, dx:16}
+];
+const INJURY_TYPES=[["strain","Strain / pull"],["tear","Tear"],["tendonitis","Tendonitis"],["sprain","Sprain"],["soreness","Sore / tight"],["surgery","Post-surgery"],["other","Other"]];
+function injuries(){return (PROFILE.fit&&PROFILE.fit.injuries)||{};}
+function injuredCats(){const s={};const inj=injuries();Object.keys(inj).forEach(k=>{const rk=k.split(":")[0];const r=INJURY_REGIONS.find(x=>x.key===rk);if(r&&inj[k])r.cats.forEach(c=>{s[c]=1;});});return s;}
+function exInjured(ex){const c=EX_CAT[ex.id];return !!(c&&injuredCats()[c]);}
 /* ---- focus areas: arms / legs / core sliders (sum 100) scale set volume per region ---- */
 const REGION_OF={quads:"legs",hamstrings:"legs",calves:"legs",posterior:"legs",glutes:"legs",biceps:"arms",triceps:"arms",forearms:"arms",core:"core"};
 function focusSet(){const f=PROFILE.fit;return !!(f&&f.focus&&f.focus.set);}
@@ -1611,6 +1652,18 @@ function renderExList(){
   const tpl=PROGRAM[S.workout]; const base=dayEx(S.workout); const bex=bonusEx(S.workout);
   ft.innerHTML='<small>'+tpl.tag+' · '+base.length+' moves</small>'+tpl.name;
   list.innerHTML="";
+  const injKeys=Object.keys(injuries());
+  if(injKeys.length){
+    const names=injKeys.map(k=>{const p=k.split(":");const r=INJURY_REGIONS.find(x=>x.key===p[0]);return (p[1]?(p[1]==="L"?"left ":"right "):"")+(r?r.label.toLowerCase():p[0]);});
+    const banner=document.createElement("div");banner.className="injbanner";
+    banner.innerHTML='🩹 <b>Adjusted for your '+esc(names.join(", "))+'.</b> Moves that load '+(names.length>1?'those areas':'that area')+' are pulled from tonight. Pulling and pressing can still involve nearby muscles, so stop anything that aggravates it, and clear it in your profile when you’re healed.';
+    list.appendChild(banner);
+  }
+  if(!base.length){
+    const none=document.createElement("div");none.className="injnone";
+    none.innerHTML=injKeys.length?'Everything in tonight’s '+tpl.name+' loads an area you’ve marked injured. Rest it, train a different day, or clear the injury in your profile.':'No moves tonight.';
+    list.appendChild(none);
+  }
   base.forEach(ex=>list.appendChild(exCard(ex)));
   if(bex.length){
     if(S.bonus){
@@ -2442,7 +2495,45 @@ function buildFitRows(){
   if(mc){mc.checked=!!f.minor; mc.onchange=()=>renderPhysPicker();}
   renderPhysPicker();
   buildFocusRows();
+  _injuries=(f.injuries&&typeof f.injuries==="object")?JSON.parse(JSON.stringify(f.injuries)):{};
+  const it=document.getElementById("injToggle");
+  if(it&&!it.dataset.b){it.dataset.b="1";it.onclick=()=>{const bd=document.getElementById("injBody"),cv=document.getElementById("injChev");const open=bd.classList.toggle("hide")===false;if(cv)cv.classList.toggle("open",open);};}
+  buildInjury();
 }
+let _injuries={};
+const INJ_BODY_SVG='<g fill="var(--panel-2)" stroke="var(--line)" stroke-width="2">'
+  +'<circle cx="100" cy="30" r="19"/>'
+  +'<rect x="84" y="48" width="32" height="14" rx="6"/>'
+  +'<path d="M68 62 Q100 54 132 62 L138 150 Q100 162 62 150 Z"/>'
+  +'<rect x="50" y="70" width="20" height="74" rx="10"/><rect x="130" y="70" width="20" height="74" rx="10"/>'
+  +'<rect x="44" y="138" width="18" height="62" rx="9"/><rect x="138" y="138" width="18" height="62" rx="9"/>'
+  +'<rect x="72" y="156" width="24" height="96" rx="12"/><rect x="104" y="156" width="24" height="96" rx="12"/>'
+  +'<rect x="74" y="250" width="20" height="92" rx="10"/><rect x="106" y="250" width="20" height="92" rx="10"/>'
+  +'</g>';
+function buildInjury(){
+  const fig=document.getElementById("injFig"); if(!fig)return;
+  let zones="";
+  INJURY_REGIONS.forEach(r=>{
+    const spots=r.paired?[["L",100-r.dx],["R",100+r.dx]]:[["",100]];
+    spots.forEach(sp=>{const key=r.key+(sp[0]?":"+sp[0]:"");const on=!!_injuries[key];
+      zones+='<circle class="injzone'+(on?" on":"")+'" data-k="'+key+'" cx="'+sp[1]+'" cy="'+r.y+'" r="13"></circle>';});
+  });
+  fig.innerHTML=INJ_BODY_SVG+zones;
+  fig.querySelectorAll(".injzone").forEach(z=>z.onclick=()=>{const k=z.dataset.k;if(_injuries[k])delete _injuries[k];else _injuries[k]={type:"strain"};buildInjury();});
+  renderInjList();
+  const cnt=document.getElementById("injCount");const n=Object.keys(_injuries).length;if(cnt)cnt.textContent=n?("· "+n+" marked"):"";
+}
+function renderInjList(){
+  const host=document.getElementById("injList"); if(!host)return;
+  const keys=Object.keys(_injuries);
+  if(!keys.length){host.innerHTML='<p class="note" style="margin:8px 0 0">Nothing marked. Tap a body part above if something’s hurt.</p>';return;}
+  host.innerHTML=keys.map(k=>{const parts=k.split(":");const r=INJURY_REGIONS.find(x=>x.key===parts[0]);const side=parts[1]?(parts[1]==="L"?"Left ":"Right "):"";const lbl=side+(r?r.label:parts[0]);const t=_injuries[k].type||"strain";
+    const opts=INJURY_TYPES.map(o=>'<option value="'+o[0]+'"'+(o[0]===t?" selected":"")+'>'+o[1]+'</option>').join('');
+    return '<div class="injrow"><span class="injlbl">'+esc(lbl)+'</span><select class="injtype" data-k="'+esc(k)+'">'+opts+'</select><button class="injdel" data-k="'+esc(k)+'" type="button" aria-label="Remove">✕</button></div>';}).join('');
+  host.querySelectorAll(".injtype").forEach(s=>s.onchange=()=>{if(_injuries[s.dataset.k])_injuries[s.dataset.k].type=s.value;});
+  host.querySelectorAll(".injdel").forEach(b=>b.onclick=()=>{delete _injuries[b.dataset.k];buildInjury();});
+}
+function readInjuries(){return Object.assign({},_injuries);}
 function renderPhysPicker(){
   const host=document.getElementById("pfPhys");if(!host)return;
   const mc=document.getElementById("pfMinor");const minor=mc?mc.checked:isMinor();
@@ -2472,7 +2563,7 @@ function readFit(){
   const mc=document.getElementById("pfMinor");const minor=mc?mc.checked:!!(PROFILE.fit&&PROFILE.fit.minor);
   let phys=physOn?physOn.dataset.p:(PROFILE.fit&&PROFILE.fit.physique)||"";
   if(minor&&MINOR_PHYS.indexOf(phys)<0)phys="";   // never carry a cutting/bulk goal in kid mode
-  return {sex:sexOn?sexOn.dataset.v:(PROFILE.fit&&PROFILE.fit.sex)||"male",bodytype:btOn?btOn.dataset.v:(PROFILE.fit&&PROFILE.fit.bodytype)||"average",level:lvlOn?lvlOn.dataset.v:(PROFILE.fit&&PROFILE.fit.level)||"return",physique:phys,minor:minor,focus:readFocus()};
+  return {sex:sexOn?sexOn.dataset.v:(PROFILE.fit&&PROFILE.fit.sex)||"male",bodytype:btOn?btOn.dataset.v:(PROFILE.fit&&PROFILE.fit.bodytype)||"average",level:lvlOn?lvlOn.dataset.v:(PROFILE.fit&&PROFILE.fit.level)||"return",physique:phys,minor:minor,focus:readFocus(),injuries:readInjuries()};
 }
 document.querySelectorAll("#kindSeg button").forEach(b=>b.onclick=()=>{document.querySelectorAll("#kindSeg button").forEach(x=>x.classList.remove("on"));b.classList.add("on");});
 document.getElementById("msgSend").onclick=sendMsg;
