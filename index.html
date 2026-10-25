@@ -355,6 +355,14 @@
   .profrow label{flex:1 1 0;min-width:0;font-size:12px;color:var(--muted);font-weight:700;display:flex;flex-direction:column;gap:5px}
   .profrow input{width:100%;box-sizing:border-box;background:var(--panel-2);border:1px solid var(--line);color:var(--ink);font-family:inherit;font-size:18px;padding:10px;border-radius:10px;outline:none}
   .fflabel{display:block;font-size:12px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-top:14px;margin-bottom:7px}
+  .pfcheck{display:flex;align-items:center;gap:11px;margin:12px 0 2px;cursor:pointer;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+  .pfcheck input{position:absolute;opacity:0;width:0;height:0}
+  .pfcheck .pfcbox{flex-shrink:0;width:22px;height:22px;border-radius:6px;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;transition:.15s}
+  .pfcheck input:checked+.pfcbox{background:var(--ember);border-color:var(--ember)}
+  .pfcheck input:checked+.pfcbox::after{content:"✓";color:#1a0d06;font-size:14px;font-weight:900}
+  .pfcheck input:focus-visible+.pfcbox{outline:2px solid var(--ember);outline-offset:2px}
+  .pfctxt{font-weight:700;font-size:15px;color:var(--ink);line-height:1.2}
+  .pfctxt small{display:block;font-weight:500;font-size:12px;color:var(--faint);text-transform:none;letter-spacing:0;margin-top:2px}
   .fflabel span{color:var(--faint);font-weight:600;text-transform:none;letter-spacing:0;font-size:11px;margin-left:6px}
   .fseg{display:flex;gap:6px}
   .fseg button{flex:1;background:var(--panel-2);border:1px solid var(--line);color:var(--muted);font-family:inherit;font-weight:700;font-size:14px;padding:9px 6px;border-radius:10px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:1px;line-height:1.1}
@@ -598,6 +606,7 @@
     </div>
     <div class="card tight">
       <span class="eyebrow">Your profile</span>
+      <label class="pfcheck"><input type="checkbox" id="pfMinor"><span class="pfcbox"></span><span class="pfctxt">Under 18<small>age-appropriate mode — no diet targets, no alcohol</small></span></label>
       <label class="fflabel">Sex</label>
       <div class="fseg" id="pfSex"><button type="button" data-v="male">Male</button><button type="button" data-v="female">Female</button><button type="button" data-v="other">Other</button></div>
       <div class="profrow">
@@ -692,7 +701,7 @@
       <span class="eyebrow">Log today</span>
       <div class="mfrow">
         <div class="mffield"><label>Weight (lb)</label><input id="bWeight" type="number" inputmode="decimal" min="0" step="0.1" placeholder="—"></div>
-        <div class="mffield"><label>Waist (in)</label><input id="bWaist" type="number" inputmode="decimal" min="0" step="0.1" placeholder="—"></div>
+        <div class="mffield" id="bWaistField"><label>Waist (in)</label><input id="bWaist" type="number" inputmode="decimal" min="0" step="0.1" placeholder="—"></div>
       </div>
       <button id="bSave" class="finish" type="button">Save today</button>
       <p class="note" style="margin-top:8px">Weigh first thing in the morning, same conditions. Measure your waist relaxed, around the belly button. Day-to-day jumps are mostly water and food — watch the line over weeks, not the daily number.</p>
@@ -701,7 +710,7 @@
       <span class="eyebrow">Weight trend</span>
       <div id="bodyChartW"></div>
     </div>
-    <div class="card">
+    <div class="card" id="waistCard">
       <span class="eyebrow">Waist trend</span>
       <div id="bodyChartWaist"></div>
     </div>
@@ -730,7 +739,7 @@
 
 <script>
 /* ===================== CONFIG ===================== */
-const USERS={ "7880":{id:"aaron",name:"Aaron"}, "1221":{id:"sean",name:"Sean"}, "7886":{id:"abe",name:"Abe"}, "0810":{id:"pat",name:"Pat"}, "0625":{id:"emily",name:"Emily"}, "1920":{id:"john",name:"John"} };
+const USERS={ "7880":{id:"aaron",name:"Aaron"}, "1221":{id:"sean",name:"Sean"}, "7886":{id:"abe",name:"Abe"}, "0810":{id:"pat",name:"Pat"}, "0625":{id:"emily",name:"Emily"}, "1920":{id:"john",name:"John"}, "5913":{id:"logan",name:"Logan"} };
 const SB_URL      = "https://xcgdnzypisbzxhaooswb.supabase.co";
 const SB_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhjZ2RuenlwaXNienhoYW9vc3diIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0OTg3MjYsImV4cCI6MjA5MDA3NDcyNn0._-3ZW05XMM50hvX4Vk2ltt6VWKITUcD0c3fWtuNiJ4Y";
 const TABLE       = "nightlift_log";
@@ -2147,6 +2156,8 @@ const PHYSIQUES={
 const PHYS_ORDER=["thin","thin_athletic","fit_average","fit_muscular","ripped","bodybuilder"];
 function physOf(){return PHYSIQUES[PROFILE.fit&&PROFILE.fit.physique]||null;}
 function fitSet(){return !!physOf();}
+function isMinor(){return !!(PROFILE.fit&&PROFILE.fit.minor);}
+const MINOR_PHYS=["fit_average","fit_muscular"];  // no cutting/bulking goals for under-18
 function computeGoals(w){
   w=parseInt(w||PROFILE.weight)||170;
   const f=PROFILE.fit||{};const sex=f.sex||"male";const bt=f.bodytype||"average";
@@ -2154,7 +2165,8 @@ function computeGoals(w){
   let perLb = sex==="female"?11.5 : sex==="other"?12.5 : 13.5;        // maintenance cal/lb, moderately active
   perLb += bt==="lean"?1 : bt==="broad"?-1.5 : 0;
   const maint=w*perLb;
-  let cal=Math.round(maint*phys.cf/10)*10;
+  const cf=isMinor()?Math.max(phys.cf,1.0):phys.cf;                   // under-18: never a deficit, eat enough to grow
+  let cal=Math.round(maint*cf/10)*10;
   const calFloor=sex==="female"?1200:1500; cal=Math.max(calFloor,cal);
   let p=Math.round(w*phys.ppl);
   let fat=Math.round(w*phys.fpl);
@@ -2259,17 +2271,22 @@ function bodyStatTiles(){
   function delta30(arr,key){if(arr.length<2)return null;const last=arr[arr.length-1];const cutoff=shiftYmd(today(),-30);let base=arr[0];for(let i=0;i<arr.length;i++){if(arr[i].date<=cutoff)base=arr[i];}if(base===last)base=arr[0];return Math.round((last[key]-base[key])*10)/10;}
   const dW=delta30(w,"w"), dWa=delta30(wa,"waist");
   function tile(val,unit,label,dv){const arrow=dv==null?"":(dv<0?"▼":(dv>0?"▲":"·"));const col=dv==null?"":(dv<=0?"var(--good)":"var(--ember)");return '<div class="stat"><div class="n">'+(val==null?"—":fmt1(val)+'<span style="font-size:13px;color:var(--muted)"> '+unit+'</span>')+'</div><div class="l">'+label+(dv==null?"":' <span style="color:'+col+'">'+arrow+fmt1(Math.abs(dv))+'</span>')+'</div></div>';}
-  return tile(latestW?latestW.w:null,"lb","Weight",dW)+tile(latestWa?latestWa.waist:null,"in","Waist",dWa)+'<div class="stat"><div class="n">'+Math.max(w.length,wa.length)+'</div><div class="l">Check-ins</div></div>';
+  const waistTile=isMinor()?"":tile(latestWa?latestWa.waist:null,"in","Waist",dWa);
+  return tile(latestW?latestW.w:null,"lb","Weight",dW)+waistTile+'<div class="stat"><div class="n">'+Math.max(w.length,isMinor()?0:wa.length)+'</div><div class="l">Check-ins</div></div>';
 }
 function renderBody(){
   const t=today();const row=BODY.find(r=>r.date===t);
+  const minor=isMinor();
+  const wf=document.getElementById("bWaistField");if(wf)wf.hidden=minor;
+  const wc=document.getElementById("waistCard");if(wc)wc.hidden=minor;
   const bw=document.getElementById("bWeight"),bwa=document.getElementById("bWaist");
   if(bw&&document.activeElement!==bw)bw.value=row&&row.w!=null?fmt1(row.w):"";
   if(bwa&&document.activeElement!==bwa)bwa.value=row&&row.waist!=null?fmt1(row.waist):"";
   document.getElementById("bodyStats").innerHTML=bodyStatTiles();
   const w=BODY.filter(r=>r.w!=null), wa=BODY.filter(r=>r.waist!=null);
   let note="";
-  if(!BODY.length)note="No check-ins yet. Log your weight and waist a couple times a week — the trend over weeks is the only thing that actually tells you if fat\u2019s coming off. That stubborn lower-back/belly fat is too small to see day to day, but it shows up here.";
+  if(minor)note=w.length?"Nice, keeping an eye on your weight. For a growing body the number usually climbs over time, and that is a good thing. Just train and eat enough.":"Log your weight now and then if you want. For a growing body the number naturally climbs over time, so do not sweat the daily reading. Just train and eat enough.";
+  else if(!BODY.length)note="No check-ins yet. Log your weight and waist a couple times a week — the trend over weeks is the only thing that actually tells you if fat\u2019s coming off. That stubborn lower-back/belly fat is too small to see day to day, but it shows up here.";
   else{const dwa=wa.length>=2?Math.round((wa[wa.length-1].waist-wa[0].waist)*10)/10:null;
     if(dwa!=null&&dwa<0)note="Waist down "+fmt1(Math.abs(dwa))+'" since you started tracking — that\u2019s the real signal the deficit is working, more than the scale.';
     else if(dwa!=null&&dwa>0)note="Waist is up a touch. One read isn\u2019t a verdict — keep logging and watch the multi-week direction. If it holds, tighten the calorie cap slightly.";
@@ -2289,14 +2306,26 @@ function renderFood(){
   const g=foodGoals(), tot=foodToday();
   const bar=(val,goal,color,label)=>{const pct=goal>0?Math.min(100,Math.round(val/goal*100)):0;return '<div class="macro"><div class="macrotop"><span>'+label+'</span><b>'+Math.round(val)+'<small>/'+goal+' g</small></b></div><div class="mtrack"><div class="mfill" style="width:'+pct+'%;background:'+color+'"></div></div></div>';};
   const barUnder=(val,cap,label,unit,capSuffix)=>{unit=unit||'cal';const v=Math.round(val);const pct=cap>0?Math.min(100,Math.round(v/cap*100)):0;const over=v>cap;const diff=Math.abs(cap-v);return '<div class="macro"><div class="macrotop"><span>'+label+' <em>cap</em></span><b>'+v.toLocaleString()+'<small>/'+(+cap).toLocaleString()+(capSuffix||'')+'</small></b></div><div class="mtrack"><div class="mfill" style="width:'+pct+'%;background:'+(over?'var(--ember)':'var(--good)')+'"></div></div><div class="undernote'+(over?' over':'')+'">'+(over?('<b>'+diff.toLocaleString()+'</b> '+unit+' over — ease up tomorrow'):('<b>'+diff.toLocaleString()+'</b> '+unit+' headroom left today'))+'</div></div>';};
-  tally.innerHTML=bar(tot.p,g.p,'var(--ember)','Protein')+bar(tot.c,g.c,'var(--gold)','Carbs')+bar(tot.fat,g.fat,'#7bd1e0','Fat')+barUnder(tot.cal,g.cal,'Calories')+barUnder(tot.sug,g.sug,'Sugar','g sugar',' g')+'<div class="rlb" style="margin-top:4px"><b>'+tot.rows.length+'</b> item'+(tot.rows.length===1?'':'s')+' logged today</div>';
+  let tallyHtml=bar(tot.p,g.p,'var(--ember)','Protein')+bar(tot.c,g.c,'var(--gold)','Carbs')+bar(tot.fat,g.fat,'#7bd1e0','Fat');
+  if(isMinor()){
+    const pct=g.cal>0?Math.min(100,Math.round(tot.cal/g.cal*100)):0;
+    tallyHtml+='<div class="macro"><div class="macrotop"><span>Calories <em>fuel</em></span><b>'+Math.round(tot.cal).toLocaleString()+'<small>/'+(+g.cal).toLocaleString()+' cal</small></b></div><div class="mtrack"><div class="mfill" style="width:'+pct+'%;background:var(--good)"></div></div><div class="undernote"><b>eat enough to grow and train</b></div></div>';
+  } else {
+    tallyHtml+=barUnder(tot.cal,g.cal,'Calories')+barUnder(tot.sug,g.sug,'Sugar','g sugar',' g');
+  }
+  tally.innerHTML=tallyHtml+'<div class="rlb" style="margin-top:4px"><b>'+tot.rows.length+'</b> item'+(tot.rows.length===1?'':'s')+' logged today</div>';
   const note=document.getElementById("foodGoalNote");
   if(note){const left=Math.max(0,Math.round(g.p-tot.p));const manual=hasManualGoals();note.innerHTML=(left>0?('<b style="color:var(--ember)">'+left+' g protein</b> to go today. '):'<b style="color:var(--good)">Protein goal hit. 💪</b> ')+'<a id="editGoals" style="color:var(--gold);text-decoration:underline;cursor:pointer">Edit goals</a>'+((manual&&fitSet())?' · <a id="resetGoals" style="color:var(--muted);text-decoration:underline;cursor:pointer">use my goal sliders</a>':'');const eg=document.getElementById("editGoals");if(eg)eg.onclick=editGoals;const rg=document.getElementById("resetGoals");if(rg)rg.onclick=()=>{if(confirm("Switch back to targets calculated from your goal sliders? Your typed-in numbers will be cleared."))resetGoals();};}
   const ft=document.getElementById("foodEntryTabs");
   if(ft&&!ft.dataset.filled){ft.querySelectorAll(".ftab").forEach(b=>b.onclick=()=>{ft.querySelectorAll(".ftab").forEach(x=>x.classList.remove("on"));b.classList.add("on");["common","manual","label"].forEach(p=>document.getElementById("foodPane-"+p).classList.toggle("hide",p!==b.dataset.ftab));});ft.dataset.filled="1";}
   const cats=document.getElementById("foodCats");
-  if(cats&&!cats.dataset.filled){cats.innerHTML=FOOD_CATS.map(c=>'<button class="segb" type="button" data-c="'+c[0]+'">'+c[1]+'</button>').join('');cats.dataset.filled="1";cats.querySelectorAll(".segb").forEach(b=>b.onclick=()=>{foodCat=b.dataset.c;cats.querySelectorAll(".segb").forEach(x=>x.classList.toggle("on",x.dataset.c===foodCat));renderFoodGrid();});}
-  if(cats)cats.querySelectorAll(".segb").forEach(x=>x.classList.toggle("on",x.dataset.c===foodCat));
+  if(cats){
+    const list=FOOD_CATS.filter(c=>!(isMinor()&&c[0]==="alcohol"));
+    if(isMinor()&&foodCat==="alcohol")foodCat="recent";
+    cats.innerHTML=list.map(c=>'<button class="segb" type="button" data-c="'+c[0]+'">'+c[1]+'</button>').join('');
+    cats.querySelectorAll(".segb").forEach(b=>b.onclick=()=>{foodCat=b.dataset.c;cats.querySelectorAll(".segb").forEach(x=>x.classList.toggle("on",x.dataset.c===foodCat));renderFoodGrid();});
+    cats.querySelectorAll(".segb").forEach(x=>x.classList.toggle("on",x.dataset.c===foodCat));
+  }
   renderFoodGrid();
   renderFoodEdit();
   const ma=document.getElementById("mfAdd");
@@ -2409,10 +2438,19 @@ function buildFitRows(){
   setSeg("pfSex",f.sex||"male");
   setSeg("pfBody",f.bodytype||"average");
   setSeg("pfLevel",f.level||"return");
-  const host=document.getElementById("pfPhys");
-  if(host){const cur=f.physique||"";host.innerHTML=PHYS_ORDER.map(k=>'<button type="button" class="pchip'+(k===cur?" on":"")+'" data-p="'+k+'"><b>'+PHYSIQUES[k].label+'</b><small>'+PHYSIQUES[k].desc+'</small></button>').join('');
-    host.querySelectorAll(".pchip").forEach(b=>b.onclick=()=>{host.querySelectorAll(".pchip").forEach(x=>x.classList.remove("on"));b.classList.add("on");});}
+  const mc=document.getElementById("pfMinor");
+  if(mc){mc.checked=!!f.minor; mc.onchange=()=>renderPhysPicker();}
+  renderPhysPicker();
   buildFocusRows();
+}
+function renderPhysPicker(){
+  const host=document.getElementById("pfPhys");if(!host)return;
+  const mc=document.getElementById("pfMinor");const minor=mc?mc.checked:isMinor();
+  const order=minor?MINOR_PHYS:PHYS_ORDER;
+  let cur=(PROFILE.fit&&PROFILE.fit.physique)||"";
+  if(minor&&order.indexOf(cur)<0)cur="";   // don't carry a hidden cutting/bulking goal into kid mode
+  host.innerHTML=order.map(k=>'<button type="button" class="pchip'+(k===cur?" on":"")+'" data-p="'+k+'"><b>'+PHYSIQUES[k].label+'</b><small>'+PHYSIQUES[k].desc+'</small></button>').join('');
+  host.querySelectorAll(".pchip").forEach(b=>b.onclick=()=>{host.querySelectorAll(".pchip").forEach(x=>x.classList.remove("on"));b.classList.add("on");});
 }
 const DEF_FOCUS={arms:34,legs:33,core:33};
 let _focusVals={arms:34,legs:33,core:33};
@@ -2431,8 +2469,10 @@ function readFit(){
   const sexOn=document.querySelector("#pfSex button.on"),btOn=document.querySelector("#pfBody button.on");
   const lvlOn=document.querySelector("#pfLevel button.on");
   const physOn=document.querySelector("#pfPhys .pchip.on");
-  const phys=physOn?physOn.dataset.p:(PROFILE.fit&&PROFILE.fit.physique)||"";
-  return {sex:sexOn?sexOn.dataset.v:(PROFILE.fit&&PROFILE.fit.sex)||"male",bodytype:btOn?btOn.dataset.v:(PROFILE.fit&&PROFILE.fit.bodytype)||"average",level:lvlOn?lvlOn.dataset.v:(PROFILE.fit&&PROFILE.fit.level)||"return",physique:phys,focus:readFocus()};
+  const mc=document.getElementById("pfMinor");const minor=mc?mc.checked:!!(PROFILE.fit&&PROFILE.fit.minor);
+  let phys=physOn?physOn.dataset.p:(PROFILE.fit&&PROFILE.fit.physique)||"";
+  if(minor&&MINOR_PHYS.indexOf(phys)<0)phys="";   // never carry a cutting/bulk goal in kid mode
+  return {sex:sexOn?sexOn.dataset.v:(PROFILE.fit&&PROFILE.fit.sex)||"male",bodytype:btOn?btOn.dataset.v:(PROFILE.fit&&PROFILE.fit.bodytype)||"average",level:lvlOn?lvlOn.dataset.v:(PROFILE.fit&&PROFILE.fit.level)||"return",physique:phys,minor:minor,focus:readFocus()};
 }
 document.querySelectorAll("#kindSeg button").forEach(b=>b.onclick=()=>{document.querySelectorAll("#kindSeg button").forEach(x=>x.classList.remove("on"));b.classList.add("on");});
 document.getElementById("msgSend").onclick=sendMsg;
