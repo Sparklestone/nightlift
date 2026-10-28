@@ -38,6 +38,21 @@
   .poke .pbody{font-size:17px;color:var(--ink);line-height:1.4;font-weight:600}
   .poke .phint{margin-top:11px;font-size:11px;color:var(--faint);letter-spacing:.05em;text-transform:uppercase}
   @keyframes pokein{from{transform:translateY(-14px) scale(.96);opacity:0}to{transform:none;opacity:1}}
+  .wipemodal{position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.66);display:flex;align-items:center;justify-content:center;padding:24px;padding-top:max(24px,env(safe-area-inset-top))}
+  .wipecard{width:100%;max-width:360px;background:var(--panel);border:1px solid rgba(255,77,77,.4);border-radius:16px;padding:22px;box-shadow:0 16px 48px rgba(0,0,0,.6)}
+  .wipetitle{font-family:'Anton',sans-serif;font-weight:400;font-size:24px;letter-spacing:.01em;color:var(--ink)}
+  .wipetext{font-size:14px;line-height:1.55;color:var(--muted);margin:10px 0 18px}
+  .wipetext b{color:#ff6b6b}
+  .wipelbl{display:block;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+  .wipepin{width:100%;background:var(--panel-2);border:1px solid var(--line);color:var(--ink);font-family:'Anton',sans-serif;font-size:28px;letter-spacing:.5em;text-align:center;padding:12px;border-radius:10px;outline:none}
+  .wipepin:focus{border-color:var(--ember)}
+  .wipepin.bad{border-color:#ff4d4d;animation:wipeshake .4s}
+  @keyframes wipeshake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+  .wipeerr{color:#ff6b6b;font-size:13px;font-weight:600;margin-top:9px}
+  .wipebtns{display:flex;gap:10px;margin-top:18px}
+  .wipecancel{flex:1;background:var(--panel-2);border:1px solid var(--line);color:var(--ink);font-family:inherit;font-weight:700;font-size:15px;padding:13px;border-radius:12px;cursor:pointer}
+  .wipego{flex:1.3;background:#ff4d4d;color:#fff;border:none;font-family:'Anton',sans-serif;font-size:16px;letter-spacing:.02em;padding:13px;border-radius:12px;cursor:pointer}
+  .wipego:disabled{background:var(--panel-2);color:var(--faint);cursor:default}
   body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(900px 500px at 78% -8%, rgba(255,106,61,.16), transparent 60%),radial-gradient(700px 600px at -10% 12%, rgba(231,192,105,.07), transparent 55%)}
   body::after{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.04;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
   .wrap{position:relative;z-index:1;max-width:680px;margin:0 auto;padding:0 18px 120px}
@@ -503,6 +518,19 @@
 <body>
 <div id="ptr"><span class="ic">↻</span></div>
 <div id="pokes" class="pokes hide"></div>
+<div id="wipeModal" class="wipemodal hide">
+  <div class="wipecard">
+    <div class="wipetitle">⚠️ Clear everything?</div>
+    <p class="wipetext">This permanently deletes all your logged sessions, food, body check-ins, and resist wins — in the cloud and on this device. <b>This can’t be undone.</b></p>
+    <label class="wipelbl" for="wipePin">Enter your PIN to confirm</label>
+    <input id="wipePin" class="wipepin" type="password" inputmode="numeric" maxlength="4" placeholder="••••" autocomplete="off">
+    <div class="wipeerr hide" id="wipeErr">That’s not your PIN. Nothing was deleted.</div>
+    <div class="wipebtns">
+      <button id="wipeCancel" class="wipecancel" type="button">Cancel</button>
+      <button id="wipeGo" class="wipego" type="button" disabled>Delete everything</button>
+    </div>
+  </div>
+</div>
 
 <!-- ===================== GATE ===================== -->
 <div id="gate">
@@ -2464,11 +2492,36 @@ function showLabelResult(parsed){
 function renderLibrary(){const lib=document.getElementById("libList");lib.innerHTML="";ORDER.forEach(k=>{const w=PROGRAM[k];const d=document.createElement("div");d.className="lib-day";d.innerHTML='<h3><i>Day '+k+'</i> '+w.name+'</h3>'+w.ex.map(ex=>'<p class="note" style="margin-top:4px">• <b>'+ex.name+'</b>'+(ex.star?' ★':'')+' — '+ex.sets+'×'+ex.reps+' <span style="color:var(--gold)">('+ex.load+')</span></p>').join('');lib.appendChild(d);});}
 
 /* ===================== reset ===================== */
-document.getElementById("resetBtn").onclick=async()=>{
-  if(!confirm("Clear ALL logged sessions, resist wins, and food everywhere (cloud + this device)?"))return;
+function myPin(){try{const c=store.get("nightlift_code");if(c)return c;}catch(e){}return Object.keys(USERS).find(k=>USERS[k].id===(ME&&ME.id))||"";}
+function closeWipe(){const m=document.getElementById("wipeModal");if(m)m.classList.add("hide");}
+async function doWipe(){
   DB={};saveLocal();RESIST=[];saveResistLocal();FOOD=[];saveFoodLocal();BODY=[];saveBodyLocal();
   if(cloud){try{await sb.from(TABLE).delete().eq("user_id",ME.id);}catch(e){console.warn(e);}try{await sb.from(T_RESIST).delete().eq("user_id",ME.id);}catch(e){console.warn(e);}try{await sb.from(T_FOOD).delete().eq("user_id",ME.id);}catch(e){console.warn(e);}try{await sb.from(T_BODY).delete().eq("user_id",ME.id);}catch(e){console.warn(e);}}
   openDay();renderToday();renderProgress();
+  const t=document.getElementById("toast");if(t){t.textContent="Everything cleared.";t.classList.add("show");setTimeout(()=>{t.classList.remove("show");t.textContent="Logged. Nice work. 💪";},1800);}
+}
+document.getElementById("resetBtn").onclick=()=>{
+  const m=document.getElementById("wipeModal"),pin=document.getElementById("wipePin"),go=document.getElementById("wipeGo"),err=document.getElementById("wipeErr");
+  if(!m)return;
+  pin.value="";go.disabled=true;err.classList.add("hide");pin.classList.remove("bad");
+  m.classList.remove("hide");
+  setTimeout(()=>{try{pin.focus();}catch(e){}},120);
+};
+document.getElementById("wipePin").addEventListener("input",()=>{
+  const pin=document.getElementById("wipePin");pin.value=pin.value.replace(/\D/g,"").slice(0,4);
+  document.getElementById("wipeGo").disabled=pin.value.length<4;
+  document.getElementById("wipeErr").classList.add("hide");pin.classList.remove("bad");
+});
+document.getElementById("wipeCancel").onclick=closeWipe;
+document.getElementById("wipeModal").addEventListener("click",e=>{if(e.target.id==="wipeModal")closeWipe();});
+document.getElementById("wipeGo").onclick=async()=>{
+  const pin=document.getElementById("wipePin"),err=document.getElementById("wipeErr"),go=document.getElementById("wipeGo");
+  const entered=(pin.value||"").replace(/\D/g,"");
+  if(entered!==myPin()){err.classList.remove("hide");pin.classList.add("bad");pin.value="";go.disabled=true;setTimeout(()=>pin.classList.remove("bad"),400);try{pin.focus();}catch(e){}return;}
+  go.disabled=true;go.textContent="Clearing…";
+  await doWipe();
+  go.textContent="Delete everything";
+  closeWipe();
 };
 
 /* ===================== tabs ===================== */
