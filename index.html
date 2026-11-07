@@ -1512,11 +1512,46 @@ const CLASSES=[
  {t:"Other class",e:"🤸",met:5}
 ];
 let classPick=false, pickType="", pickMins=0;
-function classMet(t){const c=CLASSES.find(x=>x.t===t);return c?c.met:5;}
-function classEmoji(t){const c=CLASSES.find(x=>x.t===t);return c?c.e:"🤸";}
+/* ---- rides: horseback (by gait) or cycling, logged like a class ---- */
+const RIDES=[
+  {disc:"horse", label:"Horseback", e:"🐴", gaits:[["Walk",3.8],["Trot",5.8],["Canter",7.3]]},
+  {disc:"bike",  label:"Cycling",   e:"🚴", met:7.0}
+];
+const RIDE_MET={}, RIDE_EMOJI={};
+RIDES.forEach(r=>{ if(r.gaits){r.gaits.forEach(g=>{const t=r.label+" · "+g[0];RIDE_MET[t]=g[1];RIDE_EMOJI[t]=r.e;});} else {RIDE_MET[r.label]=r.met;RIDE_EMOJI[r.label]=r.e;} });
+function isRideType(t){return Object.prototype.hasOwnProperty.call(RIDE_MET,t);}
+let ridePick=false, pickDisc="", pickGait="";
+function rideType(){ if(pickDisc==="bike")return "Cycling"; if(pickDisc==="horse"&&pickGait)return "Horseback · "+pickGait; return ""; }
+function classMet(t){const c=CLASSES.find(x=>x.t===t);if(c)return c.met;if(RIDE_MET[t]!=null)return RIDE_MET[t];return 5;}
+function classEmoji(t){const c=CLASSES.find(x=>x.t===t);if(c)return c.e;if(RIDE_EMOJI[t])return RIDE_EMOJI[t];return "🤸";}
 function classBurn(t,mins){const w=parseFloat(PROFILE.weight)||170;const kg=w/2.205;return Math.round(classMet(t)*kg*((+mins||0)/60));}
 function startClassPick(){ if(sessLogged(S)||S.klass){ entry.sessions.push(newSession("")); setActive(entry.sessions.length-1); } pickType="";pickMins=0;classPick=true; renderToday(); }
-function logClass(t,mins){ S.klass={type:t,mins:+mins||0}; S.done=true; S.sets={}; S.bonus=false; S.armboost=false; S.workout=""; classPick=false; persist(currentDate); renderToday(); }
+function logClass(t,mins){ S.klass={type:t,mins:+mins||0}; S.done=true; S.sets={}; S.bonus=false; S.armboost=false; S.workout=""; classPick=false; ridePick=false; persist(currentDate); renderToday(); }
+function startRidePick(){ if(sessLogged(S)||S.klass){ entry.sessions.push(newSession("")); setActive(entry.sessions.length-1); } pickDisc="";pickGait="";pickMins=0;ridePick=true;classPick=false; renderToday(); }
+function cancelRidePick(){ ridePick=false; if(!S.klass&&!sessLogged(S)&&entry.sessions.length>1){ entry.sessions.splice(curSess,1); setActive(entry.sessions.length-1); } if(!S.workout)S.workout=autoWorkout(); renderToday(); }
+function ridePickerEl(){
+  const d=document.createElement("div");d.className="classpick";
+  const discChips=RIDES.map(r=>'<button class="classchip'+(pickDisc===r.disc?' on':'')+'" data-disc="'+r.disc+'" type="button"><span>'+r.e+'</span>'+esc(r.label)+'</button>').join('');
+  const horse=RIDES.find(r=>r.disc==="horse");
+  const gaitChips=horse.gaits.map(g=>'<button class="durchip'+(pickGait===g[0]?' on':'')+'" data-gait="'+esc(g[0])+'" type="button">'+esc(g[0])+'</button>').join('');
+  d.innerHTML='<div class="classlead">Logged a ride? It counts as a trained day and keeps your streak going. Horseback burns more at a trot or canter.</div>'+
+    '<div class="classgrid">'+discChips+'</div>'+
+    '<div class="classdur ridegait'+(pickDisc==="horse"?'':' hide')+'"><label>Gait</label><div class="durrow">'+gaitChips+'</div></div>'+
+    '<div class="classdur"><label>Duration · 15 min steps</label><div class="durrow">'+
+      [15,30,45,60,75,90].map(m=>'<button class="durchip'+(pickMins===m?' on':'')+'" data-m="'+m+'" type="button">'+m+'m</button>').join('')+
+      '<input type="number" inputmode="numeric" min="15" step="15" id="rideMins" placeholder="min" value="'+(pickMins||"")+'"></div></div>'+
+    '<div class="classburn" id="rideBurn"></div>'+
+    '<div class="classbtns"><button class="classlog" id="rideLog" type="button" disabled>Log ride</button><button class="classcancel" id="rideCancel" type="button">Cancel</button></div>';
+  const upd=()=>{const t=rideType();const lg=d.querySelector("#rideLog");const bn=d.querySelector("#rideBurn");d.querySelector(".ridegait").classList.toggle("hide",pickDisc!=="horse");if(t&&pickMins>0){lg.disabled=false;bn.textContent="≈ "+classBurn(t,pickMins)+" cal burned";}else{lg.disabled=true;bn.textContent="";}};
+  d.querySelectorAll("[data-disc]").forEach(b=>b.onclick=()=>{pickDisc=b.dataset.disc;if(pickDisc!=="horse")pickGait="";d.querySelectorAll("[data-disc]").forEach(x=>x.classList.toggle("on",x===b));upd();});
+  d.querySelectorAll("[data-gait]").forEach(b=>b.onclick=()=>{pickGait=b.dataset.gait;d.querySelectorAll("[data-gait]").forEach(x=>x.classList.toggle("on",x===b));upd();});
+  d.querySelectorAll(".durrow [data-m]").forEach(b=>b.onclick=()=>{pickMins=+b.dataset.m;d.querySelector("#rideMins").value=pickMins;d.querySelectorAll(".durrow [data-m]").forEach(x=>x.classList.toggle("on",x===b));upd();});
+  d.querySelector("#rideMins").addEventListener("input",e=>{pickMins=+e.target.value||0;d.querySelectorAll(".durrow [data-m]").forEach(x=>x.classList.remove("on"));upd();});
+  d.querySelector("#rideLog").onclick=()=>{const t=rideType();if(t&&pickMins>0)logClass(t,pickMins);};
+  d.querySelector("#rideCancel").onclick=()=>cancelRidePick();
+  upd();
+  return d;
+}
 function removeClass(){ S.klass=null; S.done=false; S.workout=autoWorkout(); classPick=false; persist(currentDate); renderToday(); }
 function cancelClassPick(){ classPick=false; if(!S.klass&&!sessLogged(S)&&entry.sessions.length>1){ entry.sessions.splice(curSess,1); setActive(entry.sessions.length-1); } if(!S.workout)S.workout=autoWorkout(); renderToday(); }
 function classPickerEl(){
@@ -1544,8 +1579,8 @@ function classCardEl(){
     '<div class="cctype">'+esc(k.type)+'</div>'+
     '<div class="ccmeta">'+k.mins+' min · ≈ '+classBurn(k.type,k.mins)+' cal burned</div>'+
     '<div class="ccdone">✓ Logged as tonight’s training</div>'+
-    '<div class="ccbtns"><button class="ccchange" type="button">Change class</button><button class="ccswitch" type="button">Switch to a workout</button></div>';
-  d.querySelector(".ccchange").onclick=()=>{pickType=k.type;pickMins=k.mins;classPick=true;renderToday();};
+    '<div class="ccbtns"><button class="ccchange" type="button">Change</button><button class="ccswitch" type="button">Switch to a workout</button></div>';
+  d.querySelector(".ccchange").onclick=()=>{if(isRideType(k.type)){pickDisc=k.type.indexOf("Horseback")===0?"horse":"bike";pickGait=(k.type.split("· ")[1]||"");pickMins=k.mins;ridePick=true;classPick=false;}else{pickType=k.type;pickMins=k.mins;classPick=true;ridePick=false;}renderToday();};
   d.querySelector(".ccswitch").onclick=()=>removeClass();
   return d;
 }
@@ -1569,14 +1604,18 @@ function isStalled(id){const dm=STALL_DISMISS[id]||0;if(Date.now()-dm<14*864e5)r
 function autoWorkout(){const dn=allSessions().filter(x=>x.s.done&&x.s.workout);if(!dn.length)return"A";const last=dn[dn.length-1].s.workout;return ORDER[(ORDER.indexOf(last)+1)%4];}
 let currentDate=today(), entry=ensure(currentDate), curSess=0, S=null;
 if(!entry.sessions.length) entry.sessions.push(newSession(autoWorkout()));
-function setActive(i){curSess=Math.max(0,Math.min(entry.sessions.length-1,i));S=entry.sessions[curSess];classPick=false;}
+function setActive(i){curSess=Math.max(0,Math.min(entry.sessions.length-1,i));S=entry.sessions[curSess];classPick=false;ridePick=false;}
 function openDay(){currentDate=today();entry=ensure(currentDate);if(!entry.sessions.length)entry.sessions.push(newSession(autoWorkout()));setActive(entry.sessions.length-1);}
 setActive(entry.sessions.length-1);
 
 /* ===================== TODAY ===================== */
 function progressPct(){if(S.klass)return 100;const exs=dayEx(S.workout);let done=0;exs.forEach(ex=>{const s=S.sets[ex.id];if(s&&s.some(v=>+v>0))done++;});return exs.length?Math.round(done/exs.length*100):0;}
 function renderRing(){const p=progressPct();document.getElementById("ringProg").style.strokeDashoffset=201-(201*p/100);document.getElementById("ringPct").textContent=p+"%";}
-function renderDaySwitch(){const c=document.getElementById("daySwitch");c.innerHTML="";ORDER.forEach(k=>{const b=document.createElement("button");b.textContent="Day "+k;if(!S.klass&&!classPick&&k===S.workout)b.className="on";b.onclick=()=>{S.klass=null;S.done=false;classPick=false;S.workout=k;persist(currentDate);renderToday();};c.appendChild(b);});const cb=document.createElement("button");cb.textContent="🧘 Class";if(S.klass||classPick)cb.className="on";cb.onclick=()=>{if(classPick){cancelClassPick();}else if(S.klass){pickType=S.klass.type;pickMins=S.klass.mins;classPick=true;renderToday();}else{startClassPick();}};c.appendChild(cb);}
+function renderDaySwitch(){const c=document.getElementById("daySwitch");c.innerHTML="";
+  const isRide=!!(S.klass&&isRideType(S.klass.type));
+  ORDER.forEach(k=>{const b=document.createElement("button");b.textContent="Day "+k;if(!S.klass&&!classPick&&!ridePick&&k===S.workout)b.className="on";b.onclick=()=>{S.klass=null;S.done=false;classPick=false;ridePick=false;S.workout=k;persist(currentDate);renderToday();};c.appendChild(b);});
+  const cb=document.createElement("button");cb.textContent="🧘 Class";if(classPick||(S.klass&&!isRide))cb.className="on";cb.onclick=()=>{if(classPick){cancelClassPick();}else if(S.klass&&!isRide){pickType=S.klass.type;pickMins=S.klass.mins;classPick=true;ridePick=false;renderToday();}else{ridePick=false;startClassPick();}};c.appendChild(cb);
+  const rb=document.createElement("button");rb.textContent="🐴 Ride";if(ridePick||isRide)rb.className="on";rb.onclick=()=>{if(ridePick){cancelRidePick();}else if(isRide){pickDisc=S.klass.type.indexOf("Horseback")===0?"horse":"bike";pickGait=(S.klass.type.split("· ")[1]||"");pickMins=S.klass.mins;ridePick=true;classPick=false;renderToday();}else{classPick=false;startRidePick();}};c.appendChild(rb);}
 function shiftYmd(dateStr,delta){const d=new Date(dateStr+"T12:00:00Z");d.setUTCDate(d.getUTCDate()+delta);return d.toISOString().slice(0,10);}
 function fmtShort(d){return new Date(d+"T12:00:00Z").toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric',timeZone:'UTC'});}
 function gotoDay(dateStr){const t=today();if(dateStr>t)dateStr=t;currentDate=dateStr;entry=ensure(currentDate);if(!entry.sessions.length)entry.sessions.push(newSession(autoWorkout()));setActive(entry.sessions.length-1);renderToday();window.scrollTo({top:0,behavior:'smooth'});}
@@ -1676,6 +1715,7 @@ function exCard(ex){
 function renderExList(){
   const list=document.getElementById("exList");const ft=document.getElementById("focusTitle");
   if(classPick){ ft.innerHTML='<small>Outside class</small>Log a class'; list.innerHTML=""; list.appendChild(classPickerEl()); return; }
+  if(ridePick){ ft.innerHTML='<small>Outside the app</small>Log a ride'; list.innerHTML=""; list.appendChild(ridePickerEl()); return; }
   if(S.klass){ ft.innerHTML='<small>Outside class</small>'+esc(S.klass.type); list.innerHTML=""; list.appendChild(classCardEl()); return; }
   const tpl=PROGRAM[S.workout]; const base=dayEx(S.workout); const bex=bonusEx(S.workout);
   ft.innerHTML='<small>'+tpl.tag+' · '+base.length+' moves</small>'+tpl.name;
@@ -1748,7 +1788,7 @@ function renderExList(){
 }
 function refreshChecks(){const exs=shownEx();document.querySelectorAll("#exList .ex").forEach((el,i)=>{const ex=exs[i];if(!ex)return;const s=S.sets[ex.id];el.classList.toggle("done",!!(s&&s.some(v=>+v>0)));});}
 function renderCreatine(){document.getElementById("creatineToggle").classList.toggle("on",entry.creatine);}
-function renderFinish(){const b=document.getElementById("finishBtn");if(classPick){b.classList.remove("done");b.textContent="Pick a class above";return;}if(S.klass){b.classList.add("done");b.textContent="✓ CLASS LOGGED";return;}b.classList.toggle("done",S.done);b.textContent=S.done?"✓ SESSION LOGGED":(entry.sessions.length>1?"LOG THIS SESSION":"LOG TONIGHT'S WORK");}
+function renderFinish(){const b=document.getElementById("finishBtn");if(classPick){b.classList.remove("done");b.textContent="Pick a class above";return;}if(ridePick){b.classList.remove("done");b.textContent="Pick a ride above";return;}if(S.klass){b.classList.add("done");b.textContent=isRideType(S.klass.type)?"✓ RIDE LOGGED":"✓ CLASS LOGGED";return;}b.classList.toggle("done",S.done);b.textContent=S.done?"✓ SESSION LOGGED":(entry.sessions.length>1?"LOG THIS SESSION":"LOG TONIGHT'S WORK");}
 function renderToday(){const wl=document.getElementById("whoLine");if(wl)wl.textContent=(PROFILE.name||(ME?ME.name:""))+(PROFILE.height?" · "+PROFILE.height:"")+(PROFILE.weight?" · "+PROFILE.weight:"");document.getElementById("todayDate").textContent=fmtNice(currentDate);const pf=document.getElementById("planFocus");if(pf){const gf=goalFocus();if(gf){pf.innerHTML="🎯 <b>"+esc(gf.label)+"</b> · "+esc(gf.detail.replace(/^Plan tuned for [^:]+: /,""));pf.classList.remove("hide");}else{pf.classList.add("hide");pf.innerHTML="";}}renderDayNav();renderSessionBar();renderDaySwitch();renderExList();renderRing();renderCreatine();renderFinish();updateStreakLine();}
 
 function dayLogged(k){const e=DB[k];if(!e)return false;return normalizeEntry(e).sessions.some(sessLogged);}
@@ -1789,7 +1829,7 @@ function computeStreak(){let d=today();if(!dayLogged(d))d=shiftYmd(d,-1);let s=0
 function updateStreakLine(){const s=computeStreak();const el=document.getElementById("streakLine");const lg=dayLogged(currentDate);el.textContent=lg?("🔥 "+s+"-day streak — locked in."):(s>0?("🔥 "+s+"-day streak going. Log tonight to keep it alive."):"Log a session to start your streak.");}
 
 document.getElementById("creatineToggle").onclick=()=>{entry.creatine=!entry.creatine;persist(currentDate);renderCreatine();};
-document.getElementById("finishBtn").onclick=()=>{if(S.klass||classPick)return;S.done=!S.done;if(S.done)S.ts=Date.now();persist(currentDate);renderFinish();renderSessionBar();updateStreakLine();if(S.done){const t=document.getElementById("toast");t.classList.add("show");setTimeout(()=>t.classList.remove("show"),1800);}};
+document.getElementById("finishBtn").onclick=()=>{if(S.klass||classPick||ridePick)return;S.done=!S.done;if(S.done)S.ts=Date.now();persist(currentDate);renderFinish();renderSessionBar();updateStreakLine();if(S.done){const t=document.getElementById("toast");t.classList.add("show");setTimeout(()=>t.classList.remove("show"),1800);}};
 
 /* ===================== PROGRESS ===================== */
 let heatMode="workouts", heatMetric="cal";
