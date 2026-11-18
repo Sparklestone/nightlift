@@ -2254,6 +2254,19 @@ const FOODS=[
  {name:"Water (16 oz)",emoji:"💧",p:0,c:0,sug:0,fat:0,cal:0,cat:"supp",zero:true}
 ];
 const FOOD_CATS=[["recent","🕘 Recent"],["shake","🥤 Protein"],["supp","💧 Water & supps"],["meat","🍗 Meat & eggs"],["fruit","🍎 Fruit"],["veg","🥦 Veg"],["carb","🍚 Carbs"],["dairy","🥛 Dairy"],["snack","🥨 Snacks"],["alcohol","🍺 Alcohol"],["soda","🥤 Soda"]];
+/* ---- hydration: water plus a share of other drinks counts toward the daily total ---- */
+const FOOD_BY_NAME={}; FOODS.forEach(f=>{FOOD_BY_NAME[f.name]={cat:f.cat,cal:f.cal};});
+function parseOz(name){const m=String(name).match(/(\d+(?:\.\d+)?)\s*oz/i);return m?parseFloat(m[1]):0;}
+function servingWater(name,cat){
+  const oz=parseOz(name);
+  if(cat==="supp"){ if(/water/i.test(name))return oz||8; if(/shake|whey|protein/i.test(name))return 8; return 0; }
+  if(cat==="shake")return oz||8;            // protein shakes are mostly water
+  if(cat==="soda")return (oz||12)*0.9;      // soda is ~90% water
+  if(cat==="alcohol")return oz?oz*0.3:3;    // alcohol dehydrates — counts at a discount
+  return 0;
+}
+function todayWaterOz(rows){let t=0;rows.forEach(r=>{const f=FOOD_BY_NAME[r.item];if(!f)return;const w=servingWater(r.item,f.cat);if(!w)return;let n=1;if(f.cal>0&&(+r.cal)>0)n=Math.max(1,Math.round((+r.cal)/f.cal));t+=w*n;});return Math.round(t);}
+function waterGoal(){const w=parseInt(PROFILE.weight)||170;return Math.max(64,Math.round(w*0.5));}  // ~half bodyweight in oz, floor 64
 const RECENT_DAYS=7;
 const _emojiByName={}; FOODS.forEach(f=>{_emojiByName[f.name]=f.emoji;});
 function emojiFor(name){if(_emojiByName[name])return _emojiByName[name];const base=String(name||"").replace(/\s*×\d+$/,"");return _emojiByName[base]||"🍽️";}
@@ -2434,6 +2447,8 @@ function renderFood(){
   } else {
     tallyHtml+=barUnder(tot.cal,g.cal,'Calories')+barUnder(tot.sug,g.sug,'Sugar','g sugar',' g');
   }
+  const waterOz=todayWaterOz(tot.rows), wGoal=waterGoal(), wpct=wGoal>0?Math.min(100,Math.round(waterOz/wGoal*100)):0;
+  tallyHtml+='<div class="macro"><div class="macrotop"><span>💧 Water</span><b>'+waterOz+'<small>/'+wGoal+' oz</small></b></div><div class="mtrack"><div class="mfill" style="width:'+wpct+'%;background:#4aa8e0"></div></div><div class="undernote">'+(waterOz>=wGoal?'<b>Hydrated today. 💧</b>':('<b>'+Math.max(0,wGoal-waterOz)+' oz</b> to go — tap Water under Food, other drinks count too'))+'</div></div>';
   tally.innerHTML=tallyHtml+'<div class="rlb" style="margin-top:4px"><b>'+tot.rows.length+'</b> item'+(tot.rows.length===1?'':'s')+' logged today</div>';
   const note=document.getElementById("foodGoalNote");
   if(note){const left=Math.max(0,Math.round(g.p-tot.p));const manual=hasManualGoals();note.innerHTML=(left>0?('<b style="color:var(--ember)">'+left+' g protein</b> to go today. '):'<b style="color:var(--good)">Protein goal hit. 💪</b> ')+'<a id="editGoals" style="color:var(--gold);text-decoration:underline;cursor:pointer">Edit goals</a>'+((manual&&fitSet())?' · <a id="resetGoals" style="color:var(--muted);text-decoration:underline;cursor:pointer">use my goal sliders</a>':'');const eg=document.getElementById("editGoals");if(eg)eg.onclick=editGoals;const rg=document.getElementById("resetGoals");if(rg)rg.onclick=()=>{if(confirm("Switch back to targets calculated from your goal sliders? Your typed-in numbers will be cleared."))resetGoals();};}
